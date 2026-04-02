@@ -1,0 +1,17 @@
+[
+  {
+    "id": "client-demo-1",
+    "name": "Julie",
+    "phone": "0600000000",
+    "subscriptionId": "76108f56-562d-49f2-9b88-93402f3d0294",
+    "points": 10,
+    "rewardGoal": 10,
+    "visits": 4,
+    "lastVisitAt": "2026-04-02T17:06:36.736Z",
+    "rewardNotified": true,
+    "createdAt": "2026-04-02T14:57:36.194Z",
+    "updatedAt": "2026-04-02T19:44:21.225Z",
+    "segment": "loyal",
+    "totalSpent": 80
+  }
+]

@@ -1090,6 +1090,60 @@ height: "60px",
           </div>
         </div>
 
+        <div style={styles.topActions}>
+  <select
+    style={{ ...styles.input, marginBottom: 0, minWidth: "220px" }}
+    value={currentUser?.name || ""}
+    onChange={(e) => {
+      const selected = employees.find((emp) => emp.name === e.target.value);
+      if (selected) {
+        setCurrentUser({ name: selected.name, role: selected.role, email: selected.email });
+      }
+    }}
+  >
+    {employees.map((employee) => (
+      <option key={employee.id} value={employee.name}>
+        {employee.name} — {employee.role === "admin" ? "Administrateur" : "Employé"}
+      </option>
+    ))}
+  </select>
+
+  <button
+    style={styles.buttonPrimary}
+  onClick={async () => {
+  try {
+    await requestNotificationPermission();
+
+    await fetch("http://localhost:3001/send-notification", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: "🎁 Offre spéciale",
+        message: "Vous avez une récompense disponible !",
+      }),
+    });
+
+    showNotification("Notifications activées et envoyées 🚀");
+  } catch (error) {
+    console.error("Erreur notifications:", error);
+    showNotification("Erreur lors de l’activation");
+  }
+}}
+  >
+    Activer les notifications
+  </button>
+
+  <span style={currentUser.role === "admin" ? styles.badgeGreen : styles.badgeBlue}>
+    {currentUser.role === "admin" ? "Mode administrateur" : "Mode employé"}
+  </span>
+
+  <button style={styles.buttonGhost} onClick={handleLogout}>
+    Déconnexion
+  </button>
+</div>
+
         <div style={styles.hero}>
           <div style={styles.heroBadge}>Application autonome</div>
           <h2 style={styles.heroTitle}>{businessName}</h2>

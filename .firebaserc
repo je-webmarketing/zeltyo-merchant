@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "zeltyo-fcm-clean",
+    "clean": "zeltyo-fcm-clean"
+  },
+  "targets": {},
+  "etags": {}
+}

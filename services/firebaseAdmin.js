@@ -6,17 +6,27 @@ import fs from "fs";
 import path from "path";
 
 function getServiceAccount() {
-  const filePath = process.env.FIREBASE_SERVICE_ACCOUNT_FILE;
+  const jsonEnv = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-  console.log("FIREBASE_SERVICE_ACCOUNT_FILE =", filePath);
-
-  if (!filePath) {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT_FILE manquant");
+  if (!jsonEnv) {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON manquant");
   }
 
-  const fullPath = path.resolve(filePath);
-  const file = fs.readFileSync(fullPath, "utf-8");
-  return JSON.parse(file);
+  console.log("✅ Firebase chargé depuis variable Render");
+
+  return JSON.parse(jsonEnv);
+}
+  if (filePath) {
+    const fullPath = path.resolve(filePath);
+    console.log("📁 Firebase service account chargé depuis fichier :", fullPath);
+
+    const file = fs.readFileSync(fullPath, "utf-8");
+    return JSON.parse(file);
+  }
+
+  throw new Error(
+    "Firebase non configuré : ajoute FIREBASE_SERVICE_ACCOUNT_JSON ou FIREBASE_SERVICE_ACCOUNT_FILE"
+  );
 }
 
 const serviceAccount = getServiceAccount();

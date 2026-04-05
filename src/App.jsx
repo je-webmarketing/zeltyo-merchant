@@ -1,5 +1,13 @@
-import Dashboard from "./pages/Dashboard.jsx";
+import AppLive from "./AppLive.jsx";
+import ResetPassword from "./ResetPassword.jsx";
+import { app } from "./firebase";
 
 export default function App() {
-  return <Dashboard />;
+  const path = window.location.pathname;
+
+  if (path === "/reset-password") {
+    return <ResetPassword />;
+  }
+
+  return <AppLive />;
 }

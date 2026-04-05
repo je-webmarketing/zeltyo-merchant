@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { buildApiUrl } from "./config/api";
 
+const STORAGE_AUTH = "zeltyo_merchant_auth";
 
 export default function App() {
   const [businessName, setBusinessName] = useState("Mon Commerce");
@@ -10,6 +12,10 @@ export default function App() {
   const [scanId, setScanId] = useState("CL-1001");
   const [activeTab, setActiveTab] = useState("dashboard");
   const [notification, setNotification] = useState("");
+ const [showForgot, setShowForgot] = useState(false);
+const [forgotEmail, setForgotEmail] = useState(""); 
+  const poweredByLabel = "Zeltyo by JE-Webmarketing";
+const poweredByUrl = "https://ericjarry34.systeme.io/je-webmarketing";
 
  const [currentUser, setCurrentUser] = useState({
   name: "Sophie Admin",
@@ -34,6 +40,15 @@ export default function App() {
     description: "",
     channel: "Instagram",
   });
+
+  const [locationSettings, setLocationSettings] = useState({
+  country: "CH",
+  city: "Genève",
+  zoneLabel: "Genève Centre",
+  latitude: "46.2044",
+  longitude: "6.1432",
+  radiusKm: "1.5",
+});
 
   const [customers, setCustomers] = useState([
     {
@@ -157,32 +172,72 @@ export default function App() {
     role: "employee",
   });
 
-  function handleLogin() {
-    const matchedUser = employees.find(
-      (employee) =>
-        employee.email.toLowerCase() === loginForm.email.toLowerCase().trim() &&
-        employee.password === loginForm.password
-    );
+  function applyBusinessConfig(businessId) {
+  const config = BUSINESS_CONFIG[businessId];
+  if (!config) return;
 
-    if (!matchedUser) {
-      showNotification("Identifiants incorrects");
+  setBusinessName(config.name);
+  setRewardGoal(config.rewardGoal);
+  setRewardLabel(config.rewardLabel);
+  setPrimaryColor(config.primaryColor);
+  setLocationSettings({
+    country: config.country,
+    city: config.city,
+    zoneLabel: config.zoneLabel,
+    latitude: config.latitude,
+    longitude: config.longitude,
+    radiusKm: config.radiusKm,
+  });
+}
+
+  async function handleLogin() {
+  try {
+    const response = await fetch(buildApiUrl("/auth/merchant-login"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: loginForm.email,
+        password: loginForm.password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      showNotification(data.error || "Identifiants incorrects");
       return;
     }
 
+    localStorage.setItem(STORAGE_AUTH, JSON.stringify(data));
+
     setCurrentUser({
-      name: matchedUser.name,
-      role: matchedUser.role,
-      email: matchedUser.email,
+      name: data.user.name,
+      role:
+  data.user.role === "merchant_admin"
+    ? "admin"
+    : "employee",
+      email: data.user.email,
+      businessId: data.user.businessId,
     });
+
+    applyBusinessConfig(data.user.businessId);
+
     setIsAuthenticated(true);
     setNotification("");
+  } catch (error) {
+    console.error("Erreur login:", error);
+    showNotification("Erreur de connexion au serveur");
   }
+}
 
   function handleLogout() {
-    setIsAuthenticated(false);
-    setLoginForm({ email: "", password: "" });
-    setNotification("");
-  }
+  localStorage.removeItem(STORAGE_AUTH);
+  setIsAuthenticated(false);
+  setLoginForm({ email: "", password: "" });
+  setNotification("");
+}
 
   function getNowLabel() {
     const now = new Date();
@@ -449,19 +504,182 @@ export default function App() {
     return diffDays >= 7;
   });
 
+
+
+ 
+const COLORS = {
+  bg: "#050505",
+  surface: "#111111",
+  surfaceSoft: "#161616",
+  border: "#2A2A2A",
+  gold: "#D4AF37",
+  goldLight: "#F2D06B",
+  red: "#C94B32",
+  redLight: "#E06A4C",
+  text: "#F7F4EA",
+  textSoft: "#CFC7B0",
+  green: "#22c55e",
+  greenBg: "rgba(34,197,94,0.14)",
+  blueBg: "rgba(59,130,246,0.14)",
+  orangeBg: "rgba(201,75,50,0.14)",
+};
+
+const sendSmart = async (type) => {
+  try {
+    const rawAuth = localStorage.getItem(STORAGE_AUTH);
+    if (!rawAuth) {
+      alert("Session invalide");
+      return;
+    }
+
+    const token = JSON.parse(rawAuth)?.token;
+
+   const response = await fetch(
+  buildApiUrl("/automation-segmented/send-smart-promo"),
+  {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ type }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.error || "Erreur envoi");
+      return;
+    }
+
+    alert(`Promo envoyée à ${data.count} clients 🚀`);
+  } catch (err) {
+    console.error(err);
+    alert("Erreur réseau");
+  }
+};
+
+const sendPromo = async () => {
+  try {
+
+
+const rawAuth = localStorage.getItem(STORAGE_AUTH);
+if (!rawAuth) {
+  alert("Vous devez être connecté");
+  return;
+}
+
+
+
+const auth = JSON.parse(rawAuth);
+const token = auth?.token;
+
+if (!token) {
+  alert("Session invalide");
+  return;
+}
+
+const response = await fetch(
+  buildApiUrl("/notifications-advanced/send-to-subscription"),
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      subscriptionId: "a67b1b72-bc4c-431b-a3b8-9bf9d79d3079",
+      message: "🔥 Promo du jour : Croissant + café à -20% ☕🥐",
+    }),
+  }
+);
+
+    const data = await response.json();
+    console.log("Réponse promo :", data);
+
+    if (!response.ok) {
+      alert("Erreur lors de l'envoi");
+      return;
+    }
+
+    alert("Promo envoyée 🚀");
+  } catch (error) {
+    console.error(error);
+    alert("Erreur réseau");
+  }
+};
+
+const BUSINESS_CONFIG = {
+  "BUS-2": {
+    name: "Barber Club",
+    rewardGoal: 6,
+    rewardLabel: "1 coupe -50%",
+    primaryColor: "#D4AF37",
+    country: "CH",
+    city: "Lausanne",
+    zoneLabel: "Lausanne Centre",
+    latitude: "46.5197",
+    longitude: "6.6323",
+    radiusKm: "2",
+  },
+  "BUS-1": {
+    name: "Le Café du Centre",
+    rewardGoal: 10,
+    rewardLabel: "1 boisson offerte",
+    primaryColor: "#D4AF37",
+    country: "CH",
+    city: "Genève",
+    zoneLabel: "Genève Centre",
+    latitude: "46.2044",
+    longitude: "6.1432",
+    radiusKm: "1.5",
+  },
+};
+
+useEffect(() => {
+  const raw = localStorage.getItem(STORAGE_AUTH);
+  if (!raw) return;
+
+  try {
+    const auth = JSON.parse(raw);
+
+    if (auth?.token && auth?.user) {
+      setCurrentUser({
+        name: auth.user.name,
+        role:
+  auth.user.role === "merchant_admin"
+    ? "admin"
+    : "employee",
+        email: auth.user.email,
+        businessId: auth.user.businessId,
+      });
+
+applyBusinessConfig(auth.user.businessId);
+
+      setIsAuthenticated(true);
+    }
+  } catch (error) {
+    console.error("Erreur lecture session:", error);
+    localStorage.removeItem(STORAGE_AUTH);
+  }
+}, []);
+
   if (!isAuthenticated) {
+
+
     return (
       <div
-        style={{
-          minHeight: "100vh",
-          background: "linear-gradient(135deg, #ecfeff, #f8fafc)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "24px",
-          fontFamily: "Inter, Arial, sans-serif",
-        }}
-      >
+  style={{
+    minHeight: "100vh",
+    background: "linear-gradient(135deg, #050505, #111111)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "24px",
+    fontFamily: "Inter, Arial, sans-serif",
+  }}
+>
         <div
           style={{
             width: "100%",
@@ -472,79 +690,87 @@ export default function App() {
           }}
         >
           <div
-            style={{
-              background: `linear-gradient(135deg, ${primaryColor}, #14b8a6)`,
-              color: "white",
-              borderRadius: "28px",
-              padding: "34px",
-              boxShadow: "0 18px 40px rgba(15, 118, 110, 0.22)",
-            }}
-          >
+  style={{
+    background: "linear-gradient(135deg, #111111, #0B0B0B)",
+    color: COLORS.text,
+    borderRadius: "28px",
+    padding: "34px",
+    boxShadow: "0 18px 40px rgba(0,0,0,0.35)",
+    border: `1px solid ${COLORS.border}`,
+  }}
+>
             <div
-              style={{
-                display: "inline-block",
-                padding: "8px 14px",
-                borderRadius: "999px",
-                background: "rgba(255,255,255,0.16)",
-                marginBottom: "16px",
-                fontSize: "13px",
-                fontWeight: 700,
-              }}
-            >
-              Connexion sécurisée
-            </div>
+  style={{
+    display: "inline-block",
+    padding: "8px 14px",
+    borderRadius: "999px",
+    background: "rgba(212,175,55,0.12)",
+    border: `1px solid ${COLORS.gold}`,
+    marginBottom: "16px",
+    fontSize: "13px",
+    fontWeight: 700,
+    color: COLORS.goldLight,
+  }}
+>
+  Connexion sécurisée
+</div>
             <h1 style={{ fontSize: "42px", margin: "0 0 12px 0", lineHeight: 1.05 }}>
               {businessName}
             </h1>
-            <p style={{ lineHeight: 1.7, fontSize: "17px", margin: 0 }}>
+            <p style={{ lineHeight: 1.7, fontSize: "17px", margin: 0, color: COLORS.textSoft }}>
               Chaque membre de l’équipe se connecte avec son propre accès. L’administrateur garde le contrôle sur les promotions, les rôles et le suivi des actions.
             </p>
-            <div
-              style={{
-                marginTop: "22px",
-                background: "rgba(255,255,255,0.12)",
-                borderRadius: "18px",
-                padding: "18px",
-                lineHeight: 1.9,
-              }}
-            >
-              <div><strong>Démo administrateur</strong> : admin@moncommerce.ch / admin123</div>
-              <div><strong>Démo employé</strong> : nadia@moncommerce.ch / employe123</div>
+          <div
+  style={{
+    marginTop: "22px",
+    background: "#111111",
+    borderRadius: "18px",
+    padding: "18px",
+    lineHeight: 1.9,
+    border: `1px solid ${COLORS.border}`,
+    color: COLORS.textSoft,
+  }}
+>
+              <div><strong>Démo administrateur</strong> : admin@barberclub.ch / Zeltyo123!</div>
+              <div><strong>Démo employé</strong> : employee@barberclub.ch / Zeltyo123!</div>
             </div>
           </div>
 
           <div
-            style={{
-              background: "#ffffff",
-              borderRadius: "28px",
-              padding: "30px",
-              boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
-              border: "1px solid #edf2f7",
-            }}
-          >
+  style={{
+    background: COLORS.surface,
+    borderRadius: "28px",
+    padding: "30px",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+    border: `1px solid ${COLORS.border}`,
+    color: COLORS.text,
+  }}
+>
 <div style={{
   display: "flex",
   alignItems: "center",
   gap: "18px"
 }}>
-  <div style={{
-    padding: "8px",
-    borderRadius: "20px",
-    background: "linear-gradient(135deg, #facc15, #eab308)",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.25)"
-  }}>
+  <div
+  style={{
+    padding: "10px",
+    borderRadius: "22px",
+    background: "linear-gradient(135deg, #FFD700, #B8962E)",
+    boxShadow: "0 0 20px rgba(212,175,55,0.35)",
+  }}
+>
     <img
-      src="/logo.png"
-      alt="Zeltyo"
-      style={{
-        width: "72px",
-        height: "72px",
-        borderRadius: "16px",
-        background: "#000",
-        padding: "10px",
-        objectFit: "contain"
-      }}
-    />
+     src="/logo.png"
+  alt="Zeltyo"
+  style={{
+    width: "90px",
+    height: "90px",
+    borderRadius: "18px",
+    padding: "14px",
+    objectFit: "contain",
+    display: "block",
+  }}
+/>
   </div>
 
   <div>
@@ -568,7 +794,7 @@ export default function App() {
   </div>
 </div>
             <h2 style={{ marginTop: 0, fontSize: "32px", marginBottom: "12px" }}>Connexion</h2>
-            <p style={{ color: "#64748b", lineHeight: 1.6, marginBottom: "18px" }}>
+            <p style={{ color: COLORS.textSoft, lineHeight: 1.6, marginBottom: "18px" }}>
               Connectez-vous en tant qu’administrateur ou employé pour accéder aux fonctions adaptées à votre rôle.
             </p>
 
@@ -621,396 +847,507 @@ export default function App() {
               onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
             />
             <button
-              style={{
-                width: "100%",
-                border: "none",
-                background: `linear-gradient(135deg, ${primaryColor}, #14b8a6)`,
-                color: "#ffffff",
-                padding: "14px 16px",
-                borderRadius: "14px",
-                fontWeight: 800,
-                cursor: "pointer",
-                boxShadow: "0 12px 24px rgba(15, 118, 110, 0.16)",
-              }}
-              onClick={handleLogin}
-            >
-              Se connecter
-            </button>
-          </div>
+  style={{
+    width: "100%",
+    border: "none",
+    background: "linear-gradient(135deg, #D4AF37, #F2D06B)",
+    color: "#111111",
+    padding: "14px 16px",
+    borderRadius: "14px",
+    fontWeight: 800,
+    cursor: "pointer",
+    boxShadow: "0 12px 24px rgba(212,175,55,0.20)",
+  }}
+  onClick={handleLogin}
+>
+  Se connecter
+</button>
+
+<div
+  style={{
+    marginTop: "12px",
+    textAlign: "center",
+  }}
+>
+  <button
+    type="button"
+    onClick={() => setShowForgot(true)}
+    style={{
+      background: "transparent",
+      border: "none",
+      color: COLORS.goldLight,
+      fontSize: "14px",
+      fontWeight: 700,
+      cursor: "pointer",
+      textDecoration: "underline",
+    }}
+  >
+    Mot de passe oublié ?
+  </button>
+</div>
+
+{showForgot && (
+  <div
+    style={{
+      marginTop: "16px",
+      padding: "16px",
+      borderRadius: "14px",
+      background: "#111",
+      border: `1px solid ${COLORS.border}`,
+    }}
+  >
+    <div style={{ marginBottom: "10px", fontWeight: 700 }}>
+      Réinitialiser le mot de passe
+    </div>
+
+    <input
+  style={{
+    width: "100%",
+    padding: "14px 14px",
+    borderRadius: "14px",
+    border: `1px solid ${COLORS.border}`,
+    marginBottom: "12px",
+    boxSizing: "border-box",
+    fontSize: "15px",
+    outline: "none",
+    background: "#ffffff",
+    color: "#111111",
+  }}
+  placeholder="Votre email"
+  value={forgotEmail}
+  onChange={(e) => setForgotEmail(e.target.value)}
+/>
+
+<button
+  style={{
+    width: "100%",
+    border: "none",
+    background: "linear-gradient(135deg, #D4AF37, #F2D06B)",
+    color: "#111111",
+    padding: "14px 16px",
+    borderRadius: "14px",
+    fontWeight: 800,
+    cursor: "pointer",
+    boxShadow: "0 12px 24px rgba(212,175,55,0.16)",
+  }}
+  onClick={async () => {
+  try {
+   const response = await fetch(buildApiUrl("/auth/forgot-password"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email: forgotEmail }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showNotification("Erreur serveur");
+      return;
+    }
+
+    showNotification("Lien envoyé");
+setShowForgot(false);
+setForgotEmail("");
+console.log("FORGOT PASSWORD RESPONSE:", data);
+window.location.href = `/reset-password?token=${data.resetToken}`;
+  } catch (error) {
+    console.error(error);
+    showNotification("Erreur de connexion");
+  }
+}}
+>
+  Envoyer le lien
+</button>
+  </div>
+)}
+
+<div
+  style={{
+    marginTop: "16px",
+    textAlign: "center",
+    color: COLORS.textSoft,
+    fontSize: "13px",
+    lineHeight: 1.7,
+  }}
+>
+  <div>{poweredByLabel}</div>
+  <a
+    href={poweredByUrl}
+    target="_blank"
+    rel="noreferrer"
+    style={{
+      color: COLORS.goldLight,
+      textDecoration: "none",
+      fontWeight: 700,
+    }}
+  >
+    je-webmarketing.com
+  </a>
+</div>
+</div>
         </div>
       </div>
     );
   }
 
-  const styles = {
-    page: {
-      minHeight: "100vh",
-      background: "#f5f7fb",
-      padding: "24px",
-      fontFamily: "Inter, Arial, sans-serif",
-      color: "#0f172a",
-    },
-    container: {
-      maxWidth: "1320px",
-      margin: "0 auto",
-    },
-    topbar: {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: "20px",
-  marginBottom: "20px",
-  padding: "16px 20px",
-  background: "#ffffff",
-  borderRadius: "20px",
-  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
-  border: "1px solid #edf2f7",
-},
-    logoWrap: {
-      display: "flex",
-      alignItems: "center",
-      gap: "14px",
-    },
-    logo: {
-      width: "60px",
-height: "60px",
-      borderRadius: "16px",
-      background: `linear-gradient(135deg, ${primaryColor}, #2dd4bf)`,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      color: "white",
-      fontSize: "24px",
-      fontWeight: "bold",
-      boxShadow: "0 10px 30px rgba(15, 118, 110, 0.25)",
-    },
-    titleMain: {
-      margin: 0,
-      fontSize: "24px",
-      fontWeight: 800,
-    },
-    subtitle: {
-      margin: "4px 0 0 0",
-      color: "#64748b",
-      fontSize: "14px",
-    },
-    topActions: {
-      display: "flex",
-      gap: "10px",
-      flexWrap: "wrap",
-      alignItems: "center",
-    },
-    buttonGhost: {
-      border: "1px solid #dbe2ea",
-      background: "#ffffff",
-      color: "#0f172a",
-      padding: "12px 16px",
-      borderRadius: "12px",
-      fontWeight: 600,
-      cursor: "pointer",
-    },
-    buttonPrimary: {
-      border: "none",
-      background: `linear-gradient(135deg, ${primaryColor}, #14b8a6)`,
-      color: "#ffffff",
-      padding: "12px 16px",
-      borderRadius: "12px",
-      fontWeight: 700,
-      cursor: "pointer",
-      boxShadow: "0 12px 24px rgba(15, 118, 110, 0.18)",
-    },
-    hero: {
-      background: `linear-gradient(135deg, ${primaryColor}, #14b8a6)`,
-      borderRadius: "28px",
-      padding: "34px",
-      color: "white",
-      marginBottom: "20px",
-      boxShadow: "0 18px 40px rgba(15, 118, 110, 0.22)",
-    },
-    heroBadge: {
-      display: "inline-block",
-      padding: "8px 14px",
-      borderRadius: "999px",
-      background: "rgba(255,255,255,0.16)",
-      marginBottom: "16px",
-      fontSize: "13px",
-      fontWeight: 700,
-    },
-    heroTitle: {
-      fontSize: "46px",
-      lineHeight: 1.05,
-      margin: "0 0 10px 0",
-      fontWeight: 800,
-    },
-    heroText: {
-      margin: 0,
-      maxWidth: "900px",
-      lineHeight: 1.6,
-      fontSize: "18px",
-      color: "rgba(255,255,255,0.95)",
-    },
-    nav: {
-      display: "flex",
-      gap: "10px",
-      marginBottom: "20px",
-      flexWrap: "wrap",
-    },
-    navBtn: (active) => ({
-      border: active ? "none" : "1px solid #dbe2ea",
-      background: active ? `linear-gradient(135deg, ${primaryColor}, #14b8a6)` : "#ffffff",
-      color: active ? "#ffffff" : "#0f172a",
-      padding: "12px 18px",
-      borderRadius: "14px",
-      fontWeight: 700,
-      cursor: "pointer",
-      boxShadow: active ? "0 10px 24px rgba(15, 118, 110, 0.18)" : "none",
-    }),
-    grid5: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-      gap: "16px",
-      marginBottom: "20px",
-    },
-    grid2: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-      gap: "18px",
-      marginBottom: "20px",
-    },
-    grid3: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-      gap: "16px",
-      marginBottom: "20px",
-    },
-    card: {
-      background: "#ffffff",
-      borderRadius: "22px",
-      padding: "24px",
-      boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
-      border: "1px solid #edf2f7",
-    },
-    cardTitle: {
-      fontSize: "28px",
-      fontWeight: 800,
-      margin: "0 0 18px 0",
-      color: "#0f172a",
-    },
-    sectionTitle: {
-      fontSize: "20px",
-      fontWeight: 800,
-      margin: "0 0 16px 0",
-    },
-    input: {
-      width: "100%",
-      padding: "14px 14px",
-      borderRadius: "14px",
-      border: "1px solid #cbd5e1",
-      marginBottom: "12px",
-      boxSizing: "border-box",
-      fontSize: "15px",
-      outline: "none",
-      background: "#ffffff",
-    },
-    textarea: {
-      width: "100%",
-      padding: "14px 14px",
-      borderRadius: "14px",
-      border: "1px solid #cbd5e1",
-      marginBottom: "12px",
-      boxSizing: "border-box",
-      fontSize: "15px",
-      minHeight: "120px",
-      resize: "vertical",
-      fontFamily: "inherit",
-      outline: "none",
-    },
-    buttonFull: {
-      width: "100%",
-      border: "none",
-      background: `linear-gradient(135deg, ${primaryColor}, #14b8a6)`,
-      color: "#ffffff",
-      padding: "14px 16px",
-      borderRadius: "14px",
-      fontWeight: 800,
-      cursor: "pointer",
-      boxShadow: "0 12px 24px rgba(15, 118, 110, 0.16)",
-    },
-    buttonSecondary: {
-      width: "100%",
-      border: "1px solid #0f766e",
-      background: "#ffffff",
-      color: "#0f766e",
-      padding: "12px 14px",
-      borderRadius: "12px",
-      fontWeight: 700,
-      cursor: "pointer",
-      marginTop: "10px",
-    },
-    buttonWhatsapp: {
-      width: "100%",
-      border: "none",
-      background: "#25D366",
-      color: "white",
-      padding: "12px 14px",
-      borderRadius: "12px",
-      fontWeight: 700,
-      cursor: "pointer",
-      marginTop: "8px",
-    },
-    buttonReward: {
-      width: "100%",
-      border: "none",
-      background: "#16a34a",
-      color: "white",
-      padding: "12px 14px",
-      borderRadius: "12px",
-      fontWeight: 700,
-      cursor: "pointer",
-      marginTop: "10px",
-    },
-    helper: {
-      marginTop: "14px",
-      color: "#64748b",
-      lineHeight: 1.6,
-      fontSize: "14px",
-    },
-    previewBox: {
-      background: "#ecfdf5",
-      borderRadius: "18px",
-      padding: "22px",
-      color: "#065f46",
-      minHeight: "140px",
-      border: "1px solid #d1fae5",
-    },
-    customerGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-      gap: "16px",
-    },
-    customerCard: {
-      border: "1px solid #e2e8f0",
-      borderRadius: "18px",
-      padding: "18px",
-      background: "#ffffff",
-    },
-    rowBetween: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: "10px",
-      marginBottom: "10px",
-      flexWrap: "wrap",
-    },
-    badge: {
-      display: "inline-block",
-      background: "#e2e8f0",
-      color: "#0f172a",
-      borderRadius: "999px",
-      padding: "6px 10px",
-      fontSize: "12px",
-      fontWeight: 700,
-    },
-    badgeGreen: {
-      display: "inline-block",
-      background: "#dcfce7",
-      color: "#166534",
-      borderRadius: "999px",
-      padding: "6px 10px",
-      fontSize: "12px",
-      fontWeight: 700,
-    },
-    badgeBlue: {
-      display: "inline-block",
-      background: "#dbeafe",
-      color: "#1d4ed8",
-      borderRadius: "999px",
-      padding: "6px 10px",
-      fontSize: "12px",
-      fontWeight: 700,
-    },
-    badgeOrange: {
-      display: "inline-block",
-      background: "#ffedd5",
-      color: "#c2410c",
-      borderRadius: "999px",
-      padding: "6px 10px",
-      fontSize: "12px",
-      fontWeight: 700,
-    },
-    searchWrap: {
-      display: "grid",
-      gridTemplateColumns: "1.5fr 1fr",
-      gap: "16px",
-      marginBottom: "18px",
-    },
-    kpiLine: {
-      color: "#334155",
-      lineHeight: 1.9,
-      fontSize: "15px",
-    },
-    promoCard: {
-      border: "1px solid #e2e8f0",
-      borderRadius: "16px",
-      padding: "16px",
-      marginBottom: "12px",
-      background: "#ffffff",
-    },
-    promoTitle: {
-      fontSize: "18px",
-      fontWeight: 800,
-      marginBottom: "8px",
-    },
-    muted: {
-      color: "#64748b",
-      fontSize: "14px",
-    },
-    notif: {
-      background: "#16a34a",
-      color: "white",
-      padding: "12px",
-      borderRadius: "12px",
-      marginBottom: "16px",
-      textAlign: "center",
-      fontWeight: "bold",
-    },
-    fakeQrWrap: {
-      margin: "14px 0",
-      background: "#f8fafc",
-      border: "1px solid #e2e8f0",
-      borderRadius: "16px",
-      padding: "14px",
-      textAlign: "center",
-    },
-    tableLike: {
-      display: "grid",
-      gap: "12px",
-    },
-  };
-
+  
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: COLORS.bg,
+    padding: "24px",
+    fontFamily: "Inter, Arial, sans-serif",
+    color: COLORS.text,
+  },
+  container: {
+    maxWidth: "1320px",
+    margin: "0 auto",
+  },
+  topbar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "20px",
+    marginBottom: "20px",
+    padding: "18px 22px",
+    background: COLORS.surface,
+    borderRadius: "20px",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+    border: `1px solid ${COLORS.border}`,
+  },
+  topActions: {
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+  buttonGhost: {
+    border: `1px solid ${COLORS.border}`,
+    background: COLORS.surfaceSoft,
+    color: COLORS.text,
+    padding: "12px 16px",
+    borderRadius: "12px",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  buttonPrimary: {
+    border: "none",
+    background: "linear-gradient(135deg, #D4AF37, #F2D06B)",
+    color: "#111111",
+    padding: "12px 16px",
+    borderRadius: "12px",
+    fontWeight: 800,
+    cursor: "pointer",
+    boxShadow: "0 12px 24px rgba(212,175,55,0.18)",
+  },
+  hero: {
+    background: "linear-gradient(135deg, #111111, #0B0B0B)",
+    borderRadius: "28px",
+    padding: "34px",
+    color: COLORS.text,
+    marginBottom: "20px",
+    boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
+    border: `1px solid ${COLORS.border}`,
+  },
+  heroBadge: {
+    display: "inline-block",
+    padding: "8px 14px",
+    borderRadius: "999px",
+    background: "rgba(212,175,55,0.12)",
+    border: `1px solid ${COLORS.gold}`,
+    marginBottom: "16px",
+    fontSize: "13px",
+    fontWeight: 700,
+    color: COLORS.goldLight,
+  },
+  heroTitle: {
+    fontSize: "46px",
+    lineHeight: 1.05,
+    margin: "0 0 10px 0",
+    fontWeight: 800,
+    color: COLORS.goldLight,
+  },
+  heroText: {
+    margin: 0,
+    maxWidth: "900px",
+    lineHeight: 1.6,
+    fontSize: "18px",
+    color: COLORS.textSoft,
+  },
+  nav: {
+    display: "flex",
+    gap: "10px",
+    marginBottom: "20px",
+    flexWrap: "wrap",
+  },
+  navBtn: (active) => ({
+    border: active ? "none" : `1px solid ${COLORS.border}`,
+    background: active
+      ? "linear-gradient(135deg, #D4AF37, #F2D06B)"
+      : COLORS.surface,
+    color: active ? "#111111" : COLORS.text,
+    padding: "12px 18px",
+    borderRadius: "14px",
+    fontWeight: 700,
+    cursor: "pointer",
+    boxShadow: active ? "0 10px 24px rgba(212,175,55,0.18)" : "none",
+  }),
+  grid5: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+    gap: "16px",
+    marginBottom: "20px",
+  },
+  grid2: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+    gap: "18px",
+    marginBottom: "20px",
+  },
+  grid3: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "16px",
+    marginBottom: "20px",
+  },
+  card: {
+    background: COLORS.surface,
+    borderRadius: "22px",
+    padding: "24px",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+    border: `1px solid ${COLORS.border}`,
+  },
+  cardTitle: {
+    fontSize: "28px",
+    fontWeight: 800,
+    margin: "0 0 18px 0",
+    color: COLORS.goldLight,
+  },
+  sectionTitle: {
+    fontSize: "20px",
+    fontWeight: 800,
+    margin: "0 0 16px 0",
+    color: COLORS.goldLight,
+  },
+  input: {
+    width: "100%",
+    padding: "14px 14px",
+    borderRadius: "14px",
+    border: `1px solid ${COLORS.border}`,
+    marginBottom: "12px",
+    boxSizing: "border-box",
+    fontSize: "15px",
+    outline: "none",
+    background: COLORS.surfaceSoft,
+    color: COLORS.text,
+  },
+  textarea: {
+    width: "100%",
+    padding: "14px 14px",
+    borderRadius: "14px",
+    border: `1px solid ${COLORS.border}`,
+    marginBottom: "12px",
+    boxSizing: "border-box",
+    fontSize: "15px",
+    minHeight: "120px",
+    resize: "vertical",
+    fontFamily: "inherit",
+    outline: "none",
+    background: COLORS.surfaceSoft,
+    color: COLORS.text,
+  },
+  buttonFull: {
+    width: "100%",
+    border: "none",
+    background: "linear-gradient(135deg, #D4AF37, #F2D06B)",
+    color: "#111111",
+    padding: "14px 16px",
+    borderRadius: "14px",
+    fontWeight: 800,
+    cursor: "pointer",
+    boxShadow: "0 12px 24px rgba(212,175,55,0.16)",
+  },
+  buttonSecondary: {
+    width: "100%",
+    border: `1px solid ${COLORS.gold}`,
+    background: COLORS.surfaceSoft,
+    color: COLORS.goldLight,
+    padding: "12px 14px",
+    borderRadius: "12px",
+    fontWeight: 700,
+    cursor: "pointer",
+    marginTop: "10px",
+  },
+  buttonWhatsapp: {
+    width: "100%",
+    border: "none",
+    background: "#25D366",
+    color: "white",
+    padding: "12px 14px",
+    borderRadius: "12px",
+    fontWeight: 700,
+    cursor: "pointer",
+    marginTop: "8px",
+  },
+  buttonReward: {
+    width: "100%",
+    border: "none",
+    background: "linear-gradient(135deg, #C94B32, #E06A4C)",
+    color: "white",
+    padding: "12px 14px",
+    borderRadius: "12px",
+    fontWeight: 700,
+    cursor: "pointer",
+    marginTop: "10px",
+  },
+  helper: {
+    marginTop: "14px",
+    color: COLORS.textSoft,
+    lineHeight: 1.6,
+    fontSize: "14px",
+  },
+  previewBox: {
+    background: "#0B0B0B",
+    borderRadius: "18px",
+    padding: "22px",
+    color: COLORS.text,
+    minHeight: "140px",
+    border: `1px solid ${COLORS.border}`,
+  },
+  customerGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "16px",
+  },
+  customerCard: {
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: "18px",
+    padding: "18px",
+    background: COLORS.surfaceSoft,
+  },
+  rowBetween: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "10px",
+    flexWrap: "wrap",
+  },
+  badge: {
+    display: "inline-block",
+    background: COLORS.surfaceSoft,
+    color: COLORS.text,
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: "999px",
+    padding: "6px 10px",
+    fontSize: "12px",
+    fontWeight: 700,
+  },
+  badgeGreen: {
+    display: "inline-block",
+    background: COLORS.greenBg,
+    color: "#86efac",
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: "999px",
+    padding: "6px 10px",
+    fontSize: "12px",
+    fontWeight: 700,
+  },
+  badgeBlue: {
+    display: "inline-block",
+    background: COLORS.blueBg,
+    color: "#93c5fd",
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: "999px",
+    padding: "6px 10px",
+    fontSize: "12px",
+    fontWeight: 700,
+  },
+  badgeOrange: {
+    display: "inline-block",
+    background: COLORS.orangeBg,
+    color: "#fca5a5",
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: "999px",
+    padding: "6px 10px",
+    fontSize: "12px",
+    fontWeight: 700,
+  },
+  searchWrap: {
+    display: "grid",
+    gridTemplateColumns: "1.5fr 1fr",
+    gap: "16px",
+    marginBottom: "18px",
+  },
+  kpiLine: {
+    color: COLORS.textSoft,
+    lineHeight: 1.9,
+    fontSize: "15px",
+  },
+  promoCard: {
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: "16px",
+    padding: "16px",
+    marginBottom: "12px",
+    background: COLORS.surfaceSoft,
+  },
+  promoTitle: {
+    fontSize: "18px",
+    fontWeight: 800,
+    marginBottom: "8px",
+    color: COLORS.text,
+  },
+  muted: {
+    color: COLORS.textSoft,
+    fontSize: "14px",
+  },
+  notif: {
+    background: "linear-gradient(135deg, #D4AF37, #F2D06B)",
+    color: "#111111",
+    padding: "12px",
+    borderRadius: "12px",
+    marginBottom: "16px",
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  fakeQrWrap: {
+    margin: "14px 0",
+    background: "#0B0B0B",
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: "16px",
+    padding: "14px",
+    textAlign: "center",
+  },
+  tableLike: {
+    display: "grid",
+    gap: "12px",
+  },
+};
   const socialPreview = `🎁 ${promo.title || "Votre offre fidélité"}\n\n${promo.description || "Décrivez ici votre promotion en quelques lignes claires et rassurantes."}\n\nPrésentez votre carte fidélité chez ${businessName}.\nCode : ${promo.code || "PROMO10"}`;
 
   return (
     <div style={styles.page}>
       <div style={styles.container}>
         <div style={styles.topbar}>
-    <div
+  <div
   style={{
     display: "flex",
     alignItems: "center",
     gap: "18px",
-    background: "#ffffff",
+    background: "#111111",
     padding: "14px 18px",
     borderRadius: "20px",
-    boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
-    border: "1px solid #edf2f7",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+    border: "1px solid #2A2A2A",
   }}
 >
   <div
     style={{
       padding: "8px",
       borderRadius: "20px",
-      background: "linear-gradient(135deg, #facc15, #eab308)",
+      background: "linear-gradient(135deg, #FFD700, #B8962E)",
       boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
       display: "flex",
       alignItems: "center",
@@ -1033,20 +1370,27 @@ height: "60px",
   </div>
 
   <div>
-    <div style={{ fontSize: "28px", fontWeight: "900", lineHeight: 1 }}>
-      Zeltyo
-    </div>
+   <div
+  style={{
+    fontSize: "28px",
+    fontWeight: "900",
+    lineHeight: 1,
+    color: "#F2D06B",
+  }}
+>
+  Zeltyo
+</div>
 
     <div
-      style={{
-        fontSize: "15px",
-        color: "#475569",
-        marginTop: "8px",
-        fontWeight: "500",
-      }}
-    >
-      Fidélisez vos clients automatiquement
-    </div>
+  style={{
+    fontSize: "15px",
+    color: "#CFC7B0",
+    marginTop: "8px",
+    fontWeight: "500",
+  }}
+>
+  Fidélisez vos clients automatiquement
+</div>
 
     <div
       style={{
@@ -1090,60 +1434,7 @@ height: "60px",
           </div>
         </div>
 
-        <div style={styles.topActions}>
-  <select
-    style={{ ...styles.input, marginBottom: 0, minWidth: "220px" }}
-    value={currentUser?.name || ""}
-    onChange={(e) => {
-      const selected = employees.find((emp) => emp.name === e.target.value);
-      if (selected) {
-        setCurrentUser({ name: selected.name, role: selected.role, email: selected.email });
-      }
-    }}
-  >
-    {employees.map((employee) => (
-      <option key={employee.id} value={employee.name}>
-        {employee.name} — {employee.role === "admin" ? "Administrateur" : "Employé"}
-      </option>
-    ))}
-  </select>
-
-  <button
-    style={styles.buttonPrimary}
-  onClick={async () => {
-  try {
-    await requestNotificationPermission();
-
-    await fetch("http://localhost:3001/send-notification", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title: "🎁 Offre spéciale",
-        message: "Vous avez une récompense disponible !",
-      }),
-    });
-
-    showNotification("Notifications activées et envoyées 🚀");
-  } catch (error) {
-    console.error("Erreur notifications:", error);
-    showNotification("Erreur lors de l’activation");
-  }
-}}
-  >
-    Activer les notifications
-  </button>
-
-  <span style={currentUser.role === "admin" ? styles.badgeGreen : styles.badgeBlue}>
-    {currentUser.role === "admin" ? "Mode administrateur" : "Mode employé"}
-  </span>
-
-  <button style={styles.buttonGhost} onClick={handleLogout}>
-    Déconnexion
-  </button>
-</div>
-
+      
         <div style={styles.hero}>
           <div style={styles.heroBadge}>Application autonome</div>
           <h2 style={styles.heroTitle}>{businessName}</h2>
@@ -1171,6 +1462,42 @@ height: "60px",
             Paramètres
           </button>
         </div>
+
+        
+<div style={{ padding: 20 }}>
+  <button
+  onClick={currentUser.role === "admin" ? sendPromo : undefined}
+  disabled={currentUser.role !== "admin"}
+  style={{
+    padding: "12px 18px",
+    background: currentUser.role === "admin" ? "#D4AF37" : "#3A3A3A",
+    color: currentUser.role === "admin" ? "#111111" : "#999999",
+    border: "none",
+    borderRadius: 10,
+    fontWeight: "bold",
+    cursor: currentUser.role === "admin" ? "pointer" : "not-allowed",
+    opacity: currentUser.role === "admin" ? 1 : 0.7,
+  }}
+  title={
+    currentUser.role === "admin"
+      ? "Envoyer une promotion"
+      : "Réservé à l’administrateur"
+  }
+>
+  🔥 Envoyer promo
+</button>
+{currentUser.role !== "admin" && (
+  <div
+    style={{
+      marginTop: "8px",
+      color: "#CFC7B0",
+      fontSize: "13px",
+    }}
+  >
+    Seul l’administrateur peut envoyer une promotion push.
+  </div>
+)}
+</div>
 
         {activeTab === "dashboard" && (
           <>
@@ -1357,8 +1684,47 @@ height: "60px",
         )}
 
         {activeTab === "promos" && (
-          <div style={styles.grid2}>
-            <div style={styles.card}>
+  <div style={styles.grid2}>
+    <div
+      style={{
+        ...styles.card,
+        gridColumn: "1 / -1",
+      }}
+    >
+      <h3 style={styles.cardTitle}>Segmentation intelligente</h3>
+
+      <div style={{ display: "flex", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
+        <button
+          onClick={currentUser.role === "admin" ? () => sendSmart("inactive") : undefined}
+          disabled={currentUser.role !== "admin"}
+          style={styles.buttonGhost}
+        >
+          🔁 Inactifs
+        </button>
+
+        <button
+          onClick={currentUser.role === "admin" ? () => sendSmart("vip") : undefined}
+          disabled={currentUser.role !== "admin"}
+          style={styles.buttonGhost}
+        >
+          💎 VIP
+        </button>
+
+        <button
+          onClick={currentUser.role === "admin" ? () => sendSmart("near_reward") : undefined}
+          disabled={currentUser.role !== "admin"}
+          style={styles.buttonGhost}
+        >
+          🎁 Presque récompense
+        </button>
+      </div>
+
+      <p style={styles.helper}>
+        Envoyez une promotion ciblée selon le comportement client : clients inactifs, VIP ou proches d’une récompense.
+      </p>
+    </div>
+
+    <div style={styles.card}>
               <h3 style={styles.cardTitle}>Gérer les promotions</h3>
               <div style={{ marginBottom: "14px" }}>
                 <span style={currentUser.role === "admin" ? styles.badgeGreen : styles.badgeOrange}>
@@ -1567,6 +1933,73 @@ height: "60px",
                 value={primaryColor}
                 onChange={(e) => setPrimaryColor(e.target.value)}
               />
+
+<h3 style={{ ...styles.sectionTitle, marginTop: "24px" }}>
+  Zone géographique
+</h3>
+
+<input
+  style={styles.input}
+  placeholder="Pays"
+  value={locationSettings.country}
+  onChange={(e) =>
+    setLocationSettings({ ...locationSettings, country: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="Ville"
+  value={locationSettings.city}
+  onChange={(e) =>
+    setLocationSettings({ ...locationSettings, city: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="Nom de la zone"
+  value={locationSettings.zoneLabel}
+  onChange={(e) =>
+    setLocationSettings({ ...locationSettings, zoneLabel: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="Latitude"
+  value={locationSettings.latitude}
+  onChange={(e) =>
+    setLocationSettings({ ...locationSettings, latitude: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="Longitude"
+  value={locationSettings.longitude}
+  onChange={(e) =>
+    setLocationSettings({ ...locationSettings, longitude: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  type="number"
+  step="0.1"
+  placeholder="Rayon en km"
+  value={locationSettings.radiusKm}
+  onChange={(e) =>
+    setLocationSettings({ ...locationSettings, radiusKm: e.target.value })
+  }
+/>
+
+<p style={styles.helper}>
+  Définissez la zone du commerce et le rayon d’action marketing. Ce périmètre
+  pourra ensuite servir pour les campagnes locales, les notifications ciblées
+  et l’ajustement du rayon selon la densité de la zone.
+</p>
+
               <button style={styles.buttonFull}>Enregistrer les réglages</button>
             </div>
 
@@ -1589,10 +2022,38 @@ height: "60px",
                 <p style={{ lineHeight: 1.7, opacity: 0.95 }}>
                   Interface claire, programme rassurant et usage simple pour l’équipe, avec supervision côté administrateur.
                 </p>
+                <p style={{ lineHeight: 1.7, opacity: 0.95, marginBottom: 0 }}>
+  Zone : {locationSettings.zoneLabel} • {locationSettings.city} •{" "}
+  {locationSettings.country} • Rayon : {locationSettings.radiusKm} km
+</p>
               </div>
             </div>
           </div>
         )}
+        <div
+  style={{
+    marginTop: "28px",
+    textAlign: "center",
+    color: COLORS.textSoft,
+    fontSize: "13px",
+    lineHeight: 1.8,
+    paddingBottom: "10px",
+  }}
+>
+  <div>{poweredByLabel}</div>
+  <a
+    href={poweredByUrl}
+    target="_blank"
+    rel="noreferrer"
+    style={{
+      color: COLORS.goldLight,
+      textDecoration: "none",
+      fontWeight: 700,
+    }}
+  >
+    je-webmarketing.com
+  </a>
+</div>
       </div>
     </div>
   );
@@ -1638,15 +2099,19 @@ function StatCard({ label, value }) {
   return (
     <div
       style={{
-        background: "#ffffff",
+        background: "#111111",
         borderRadius: "20px",
         padding: "22px",
-        boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
-        border: "1px solid #edf2f7",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+        border: "1px solid #2A2A2A",
       }}
     >
-      <div style={{ color: "#64748b", fontSize: "14px", marginBottom: "10px" }}>{label}</div>
-      <div style={{ fontSize: "34px", fontWeight: 800 }}>{value}</div>
+      <div style={{ color: "#CFC7B0", fontSize: "14px", marginBottom: "10px" }}>
+        {label}
+      </div>
+      <div style={{ fontSize: "34px", fontWeight: 800, color: "#F2D06B" }}>
+        {value}
+      </div>
     </div>
   );
 }

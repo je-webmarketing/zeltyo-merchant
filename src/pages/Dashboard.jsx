@@ -2,6 +2,32 @@ import { useEffect, useMemo, useState } from "react";
 
 const API_BASE = "https://zeltyo-backend.onrender.com";
 
+const BUSINESS = {
+  name: "Zeltyo Coffee",
+  address: "12 rue du centre, Genève",
+  lat: 46.2044,
+  lng: 6.1432,
+  googleMapsUrl: "https://www.google.com/maps?q=46.2044,6.1432",
+  reviewUrl: "https://g.page/r/TON-LIEN-AVIS",
+};
+
+const COLORS = {
+  bg: "#050505",
+  surface: "#111111",
+  surfaceSoft: "#161616",
+  border: "#2A2A2A",
+  gold: "#D4AF37",
+  goldLight: "#F2D06B",
+  red: "#C94B32",
+  redLight: "#E06A4C",
+  text: "#F7F4EA",
+  textSoft: "#CFC7B0",
+  green: "#22c55e",
+  greenBg: "rgba(34,197,94,0.14)",
+  yellowBg: "rgba(212,175,55,0.12)",
+  redBg: "rgba(201,75,50,0.14)",
+};
+
 export default function Dashboard() {
   const [clients, setClients] = useState([]);
   const [loadingCampaign, setLoadingCampaign] = useState(false);
@@ -60,18 +86,34 @@ export default function Dashboard() {
     const days = getDaysSinceLastVisit(date);
 
     if (days === null) {
-      return { label: "Aucune visite", color: "#6b7280", bg: "#f3f4f6" };
+      return {
+        label: "Aucune visite",
+        color: COLORS.textSoft,
+        bg: "#1E1E1E",
+      };
     }
 
     if (days <= 2) {
-      return { label: "🟢 Récent", color: "#166534", bg: "#dcfce7" };
+      return {
+        label: "🟢 Récent",
+        color: "#86efac",
+        bg: COLORS.greenBg,
+      };
     }
 
     if (days <= 6) {
-      return { label: "🟡 À surveiller", color: "#92400e", bg: "#fef3c7" };
+      return {
+        label: "🟡 À surveiller",
+        color: COLORS.goldLight,
+        bg: COLORS.yellowBg,
+      };
     }
 
-    return { label: "🔴 Urgent", color: "#991b1b", bg: "#fee2e2" };
+    return {
+      label: "🔴 Urgent",
+      color: "#fca5a5",
+      bg: COLORS.redBg,
+    };
   };
 
   const getInactiveClients = () => {
@@ -185,7 +227,7 @@ export default function Dashboard() {
         body: JSON.stringify({ type }),
       });
 
-      alert("Campagne envoyée");
+      alert("Notifications envoyées ✅");
       await fetchClients();
     } catch (err) {
       console.error("Erreur campagne:", err);
@@ -195,52 +237,42 @@ export default function Dashboard() {
     }
   };
 
- const sendTestNotification = async () => {
-  try {
-    await fetch(`${API_BASE}/notifications/test`, {
-      method: "POST",
-    });
+  const sendTestNotification = async () => {
+    try {
+      await fetch(`${API_BASE}/notifications/test`, {
+        method: "POST",
+      });
 
-    alert("Notification envoyée !");
-  } catch (err) {
-    console.error(err);
-    alert("Erreur envoi notification");
-  }
-}; 
-
-const runAutomation = async (type) => {
-  try {
-    const res = await fetch(`${API_BASE}/automation-segmented/run`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ type }),
-    });
-
-    const data = await res.json();
-    console.log("Résultat automation :", data);
-
-    alert("Notifications envoyées ✅");
-  } catch (err) {
-    console.error(err);
-    alert("Erreur automation ❌");
-  }
-};
+      alert("Notification envoyée !");
+    } catch (err) {
+      console.error(err);
+      alert("Erreur envoi notification");
+    }
+  };
 
   return (
     <div
       style={{
         padding: 24,
         fontFamily: "Arial, sans-serif",
-        background: "#f8fafc",
+        background: COLORS.bg,
         minHeight: "100vh",
-        color: "#111827",
+        color: COLORS.text,
       }}
     >
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ marginBottom: 8 }}>Zeltyo Dashboard</h1>
-        <p style={{ margin: 0, color: "#4b5563" }}>
+        <h1
+          style={{
+            marginBottom: 8,
+            color: COLORS.goldLight,
+            fontSize: 42,
+            fontWeight: 800,
+            letterSpacing: 0.3,
+          }}
+        >
+          Zeltyo Dashboard
+        </h1>
+        <p style={{ margin: 0, color: COLORS.textSoft, fontSize: 18 }}>
           Vue simple pour piloter la fidélité, les relances et les meilleurs clients.
         </p>
       </div>
@@ -248,91 +280,115 @@ const runAutomation = async (type) => {
       {suggestion && (
         <div
           style={{
-            background: "#fef3c7",
-            padding: 16,
-            borderRadius: 12,
-            marginBottom: 20,
-            border: "1px solid #f59e0b",
+            background: COLORS.yellowBg,
+            padding: 18,
+            borderRadius: 16,
+            marginBottom: 22,
+            border: `1px solid ${COLORS.gold}`,
+            color: COLORS.text,
+            boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
           }}
         >
           {suggestion.type === "relaunch" && (
             <div>
               💡 Suggestion du jour : relancer{" "}
-              <strong>{suggestion.client.name}</strong>
+              <strong style={{ color: COLORS.goldLight }}>
+                {suggestion.client.name}
+              </strong>
             </div>
           )}
 
           {suggestion.type === "reward" && (
             <div>
               💡 Suggestion du jour : valoriser{" "}
-              <strong>{suggestion.client.name}</strong>
+              <strong style={{ color: COLORS.goldLight }}>
+                {suggestion.client.name}
+              </strong>
             </div>
           )}
         </div>
       )}
 
-      <div
-        style={{
-          background: "white",
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 20,
-          border: "1px solid #e5e7eb",
-        }}
-      >
-        <div style={{ marginBottom: 12, fontWeight: "bold" }}>
+      <SectionCard>
+        <div style={{ marginBottom: 16, fontWeight: "bold", fontSize: 26, color: COLORS.goldLight }}>
           Actions marketing
         </div>
 
-        <button onClick={sendTestNotification}>
-  🔔 Notification test
-</button>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <button
+            onClick={sendTestNotification}
+            style={goldButton()}
+          >
+            🔔 Notification test
+          </button>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-         <button onClick={() => runAutomation("inactive")}>
-  Relancer inactifs
-</button>
+          <button
+            onClick={() => runCampaign("inactive")}
+            disabled={loadingCampaign}
+            style={redButton()}
+          >
+            🔁 Relancer inactifs
+          </button>
 
-<button onClick={() => runAutomation("loyal")}>
-  Booster fidélité
-</button>
+          <button
+            onClick={() => runCampaign("loyal")}
+            disabled={loadingCampaign}
+            style={goldButton()}
+          >
+            ❤️ Booster fidélité
+          </button>
 
-<button onClick={() => runAutomation("vip")}>
-  Récompenser VIP
-</button>
+          <button
+            onClick={() => runCampaign("vip")}
+            disabled={loadingCampaign}
+            style={accentButton()}
+          >
+            ⭐ Récompenser VIP
+          </button>
         </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
-        <Card title="Nouveaux" value={count("nouveau")} />
-        <Card title="Fidèles" value={count("loyal")} />
-        <Card title="VIP" value={count("vip")} />
-        <Card title="Inactifs" value={count("inactive")} />
-        <Card title="Urgents" value={urgentCount} />
-      </div>
+      </SectionCard>
 
       <div
         style={{
-          background: "white",
-          borderRadius: 12,
-          padding: 16,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+          gap: 16,
           marginBottom: 24,
-          border: "1px solid #e5e7eb",
         }}
       >
-        <h2 style={{ marginTop: 0 }}>À relancer aujourd’hui</h2>
+        <StatCard title="Nouveaux" value={count("nouveau")} />
+        <StatCard title="Fidèles" value={count("loyal")} />
+        <StatCard title="VIP" value={count("vip")} />
+        <StatCard title="Inactifs" value={count("inactive")} />
+        <StatCard title="Urgents" value={urgentCount} />
+      </div>
+
+      <SectionCard>
+        <h2
+          style={{
+            marginTop: 0,
+            marginBottom: 16,
+            color: COLORS.goldLight,
+            fontSize: 24,
+          }}
+        >
+          À relancer aujourd’hui
+        </h2>
 
         {inactiveClients.length === 0 ? (
-          <p style={{ marginBottom: 0 }}>Aucun client à relancer 👍</p>
+          <p style={{ marginBottom: 0, color: COLORS.textSoft }}>
+            Aucun client à relancer 👍
+          </p>
         ) : (
           <ul style={{ paddingLeft: 20, marginBottom: 0 }}>
             {inactiveClients.map((c) => (
-              <li key={c.id} style={{ marginBottom: 10 }}>
-                <strong>{c.name}</strong> ({c.phone}) — {formatDaysAgo(c.lastVisitAt)}{" "}
+              <li key={c.id} style={{ marginBottom: 10, color: COLORS.text }}>
+                <strong style={{ color: COLORS.goldLight }}>{c.name}</strong> ({c.phone}) —{" "}
+                {formatDaysAgo(c.lastVisitAt)}
                 <button
                   onClick={() => relaunchClient(c.phone)}
                   disabled={loadingRelaunchPhone === c.phone}
-                  style={{ ...smallButtonStyle("#b91c1c"), marginLeft: 10 }}
+                  style={{ ...redButtonSmall(), marginLeft: 10 }}
                 >
                   {loadingRelaunchPhone === c.phone
                     ? "Envoi..."
@@ -342,82 +398,147 @@ const runAutomation = async (type) => {
             ))}
           </ul>
         )}
-      </div>
+      </SectionCard>
 
-      <div
-        style={{
-          background: "white",
-          borderRadius: 12,
-          padding: 16,
-          border: "1px solid #e5e7eb",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>Clients</h2>
+      <SectionCard>
+        <div
+          style={{
+            background: "linear-gradient(180deg, #111111, #0B0B0B)",
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: 18,
+            padding: 22,
+            boxShadow: "0 10px 24px rgba(0,0,0,0.35)",
+          }}
+        >
+          <h3 style={{ marginTop: 0, color: COLORS.goldLight, fontSize: 26 }}>
+            📍 Mon commerce
+          </h3>
+
+          <p style={{ marginBottom: 8, fontSize: 24, fontWeight: 700, color: COLORS.text }}>
+            {BUSINESS.name}
+          </p>
+          <p style={{ color: COLORS.textSoft, fontSize: 18 }}>{BUSINESS.address}</p>
+
+          <iframe
+  src={`https://www.google.com/maps?q=${BUSINESS.lat},${BUSINESS.lng}&z=15&output=embed`}
+  width="100%"
+  height="200"
+  style={{
+    border: 0,
+    borderRadius: 12,
+    marginTop: 12,
+  }}
+  allowFullScreen=""
+  loading="lazy"
+/>
+
+          <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <a href={BUSINESS.googleMapsUrl} target="_blank" rel="noreferrer">
+              <button style={goldButton()}>Voir sur Google Maps</button>
+            </a>
+
+            <a href={BUSINESS.reviewUrl} target="_blank" rel="noreferrer">
+              <button style={reviewButton()}>⭐ Laisser un avis</button>
+            </a>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard>
+        <h2
+          style={{
+            marginTop: 0,
+            color: COLORS.goldLight,
+            fontSize: 24,
+            marginBottom: 16,
+          }}
+        >
+          Clients
+        </h2>
 
         <div style={{ overflowX: "auto" }}>
           <table
-            border="1"
-            cellPadding="10"
             style={{
               borderCollapse: "collapse",
               width: "100%",
-              background: "white",
+              background: COLORS.surface,
+              color: COLORS.text,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: 14,
+              overflow: "hidden",
             }}
           >
-            <thead style={{ background: "#f3f4f6" }}>
+            <thead style={{ background: "#1A1A1A" }}>
               <tr>
-                <th>Nom</th>
-                <th>Téléphone</th>
-                <th>Visites</th>
-                <th>Points</th>
-                <th>Segment</th>
-                <th>Dernière visite</th>
-                <th>Urgence</th>
-                <th>Dépenses</th>
-                <th>Score</th>
-                <th>Statut</th>
-                <th>Action</th>
+                {[
+                  "Nom",
+                  "Téléphone",
+                  "Visites",
+                  "Points",
+                  "Segment",
+                  "Dernière visite",
+                  "Urgence",
+                  "Dépenses",
+                  "Score",
+                  "Statut",
+                  "Action",
+                ].map((label) => (
+                  <th
+                    key={label}
+                    style={{
+                      border: `1px solid ${COLORS.border}`,
+                      padding: 14,
+                      color: COLORS.goldLight,
+                      fontWeight: 700,
+                      textAlign: "left",
+                    }}
+                  >
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
+
             <tbody>
               {sortedClients.map((c) => {
                 const urgency = getUrgency(c.lastVisitAt);
 
                 return (
                   <tr key={c.id}>
-                    <td>{c.name}</td>
-                    <td>{c.phone}</td>
-                    <td>{c.visits}</td>
-                    <td>{c.points}</td>
-                    <td>{c.segment}</td>
-                    <td>{formatDaysAgo(c.lastVisitAt)}</td>
-                    <td>
+                    <td style={tdStyle()}>{c.name}</td>
+                    <td style={tdStyle()}>{c.phone}</td>
+                    <td style={tdStyle()}>{c.visits}</td>
+                    <td style={tdStyle()}>{c.points}</td>
+                    <td style={tdStyle()}>{c.segment}</td>
+                    <td style={tdStyle()}>{formatDaysAgo(c.lastVisitAt)}</td>
+                    <td style={tdStyle()}>
                       <span
                         style={{
                           background: urgency.bg,
                           color: urgency.color,
-                          padding: "4px 8px",
+                          padding: "5px 10px",
                           borderRadius: 999,
                           fontWeight: "bold",
                           fontSize: 12,
                           whiteSpace: "nowrap",
+                          border: `1px solid ${COLORS.border}`,
                         }}
                       >
                         {urgency.label}
                       </span>
                     </td>
-                    <td>{c.totalSpent ?? 0} €</td>
-                    <td>{getClientScore(c)}</td>
-                    <td>
+                    <td style={tdStyle()}>{c.totalSpent ?? 0} €</td>
+                    <td style={tdStyle()}>{getClientScore(c)}</td>
+                    <td style={tdStyle()}>
                       {isTopClient(c) && (
-                        <span style={{ color: "#b45309", fontWeight: "bold" }}>
+                        <span style={{ color: COLORS.goldLight, fontWeight: "bold" }}>
                           🏆 Top client
                         </span>
                       )}
                       {isAtRisk(c) && (
                         <span
                           style={{
-                            color: "#b91c1c",
+                            color: "#fca5a5",
                             fontWeight: "bold",
                             marginLeft: isTopClient(c) ? 8 : 0,
                           }}
@@ -426,11 +547,11 @@ const runAutomation = async (type) => {
                         </span>
                       )}
                     </td>
-                    <td>
+                    <td style={tdStyle()}>
                       <button
                         onClick={() => addVisit(c.phone)}
                         disabled={loadingVisitPhone === c.phone}
-                        style={smallButtonStyle("#1e7f74")}
+                        style={goldButtonSmall()}
                       >
                         {loadingVisitPhone === c.phone ? "Ajout..." : "+ visite"}
                       </button>
@@ -441,7 +562,15 @@ const runAutomation = async (type) => {
 
               {sortedClients.length === 0 && (
                 <tr>
-                  <td colSpan="11" style={{ textAlign: "center", padding: 20 }}>
+                  <td
+                    colSpan="11"
+                    style={{
+                      textAlign: "center",
+                      padding: 24,
+                      color: COLORS.textSoft,
+                      border: `1px solid ${COLORS.border}`,
+                    }}
+                  >
                     Aucun client pour le moment
                   </td>
                 </tr>
@@ -449,48 +578,147 @@ const runAutomation = async (type) => {
             </tbody>
           </table>
         </div>
-      </div>
+      </SectionCard>
     </div>
   );
 }
 
-function Card({ title, value }) {
+function SectionCard({ children }) {
   return (
     <div
       style={{
-        padding: 18,
-        border: "1px solid #e5e7eb",
-        borderRadius: 12,
-        width: 160,
-        textAlign: "center",
-        background: "white",
+        background: COLORS.surface,
+        borderRadius: 18,
+        padding: 22,
+        marginBottom: 24,
+        border: `1px solid ${COLORS.border}`,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
       }}
     >
-      <h3 style={{ marginTop: 0, marginBottom: 8, fontSize: 16 }}>{title}</h3>
-      <p style={{ fontSize: 28, margin: 0, fontWeight: "bold" }}>{value}</p>
+      {children}
     </div>
   );
 }
 
-function buttonStyle(background) {
+function StatCard({ title, value }) {
+  return (
+    <div
+      style={{
+        padding: 22,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: 18,
+        textAlign: "center",
+        background: COLORS.surface,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+      }}
+    >
+      <h3
+        style={{
+          marginTop: 0,
+          marginBottom: 10,
+          fontSize: 18,
+          color: COLORS.textSoft,
+          fontWeight: 600,
+        }}
+      >
+        {title}
+      </h3>
+      <p
+        style={{
+          fontSize: 42,
+          margin: 0,
+          fontWeight: "bold",
+          color: COLORS.goldLight,
+          lineHeight: 1,
+        }}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function goldButton() {
   return {
-    background,
+    background: "linear-gradient(135deg, #D4AF37, #F2D06B)",
+    color: "#111111",
+    border: "none",
+    padding: "11px 16px",
+    borderRadius: 12,
+    cursor: "pointer",
+    fontWeight: "bold",
+    boxShadow: "0 8px 18px rgba(212,175,55,0.25)",
+  };
+}
+
+function accentButton() {
+  return {
+    background: "linear-gradient(135deg, #A14CFF, #D4AF37)",
+    color: "#111111",
+    border: "none",
+    padding: "11px 16px",
+    borderRadius: 12,
+    cursor: "pointer",
+    fontWeight: "bold",
+    boxShadow: "0 8px 18px rgba(161,76,255,0.22)",
+  };
+}
+
+function redButton() {
+  return {
+    background: "linear-gradient(135deg, #C94B32, #E06A4C)",
     color: "white",
     border: "none",
-    padding: "10px 16px",
-    borderRadius: 8,
+    padding: "11px 16px",
+    borderRadius: 12,
+    cursor: "pointer",
+    fontWeight: "bold",
+    boxShadow: "0 8px 18px rgba(201,75,50,0.22)",
+  };
+}
+
+function reviewButton() {
+  return {
+    background: "linear-gradient(135deg, #C94B32, #D4AF37)",
+    color: "#111111",
+    border: "none",
+    padding: "11px 16px",
+    borderRadius: 12,
+    cursor: "pointer",
+    fontWeight: "bold",
+    boxShadow: "0 8px 18px rgba(201,75,50,0.22)",
+  };
+}
+
+function goldButtonSmall() {
+  return {
+    background: "linear-gradient(135deg, #D4AF37, #F2D06B)",
+    color: "#111111",
+    border: "none",
+    padding: "8px 12px",
+    borderRadius: 10,
     cursor: "pointer",
     fontWeight: "bold",
   };
 }
 
-function smallButtonStyle(background) {
+function redButtonSmall() {
   return {
-    background,
+    background: "linear-gradient(135deg, #C94B32, #E06A4C)",
     color: "white",
     border: "none",
-    padding: "6px 10px",
-    borderRadius: 6,
+    padding: "8px 12px",
+    borderRadius: 10,
     cursor: "pointer",
+    fontWeight: "bold",
+  };
+}
+
+function tdStyle() {
+  return {
+    border: `1px solid ${COLORS.border}`,
+    padding: 14,
+    color: COLORS.text,
+    background: COLORS.surface,
   };
 }

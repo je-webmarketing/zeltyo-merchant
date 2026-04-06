@@ -1,5 +1,5 @@
 const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL || "http://zeltyo-app.onrender.com").replace(/\/+$/, "");
+  (import.meta.env.VITE_API_BASE_URL || "https://zeltyo-app.onrender.com").replace(/\/+$/, "");
 
 function buildApiUrl(path) {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;

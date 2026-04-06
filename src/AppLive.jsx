@@ -682,10 +682,7 @@ applyBusinessConfig(auth.user.businessId);
   }}
   
 >
-  <div style={{ color: "red", fontSize: "40px", fontWeight: "bold" }}>
-  MERCHANT TEST
-</div>
-        <div
+         <div
           style={{
             width: "100%",
             maxWidth: "980px",

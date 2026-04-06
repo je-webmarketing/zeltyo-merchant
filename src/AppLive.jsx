@@ -669,6 +669,7 @@ applyBusinessConfig(auth.user.businessId);
 
 
     return (
+      
       <div
   style={{
     minHeight: "100vh",
@@ -679,7 +680,11 @@ applyBusinessConfig(auth.user.businessId);
     padding: "24px",
     fontFamily: "Inter, Arial, sans-serif",
   }}
+  
 >
+  <div style={{ color: "red", fontSize: "40px", fontWeight: "bold" }}>
+  MERCHANT TEST
+</div>
         <div
           style={{
             width: "100%",

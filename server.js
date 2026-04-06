@@ -29,13 +29,22 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://zeltyo.netlify.app"
-    ],
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
+app.options("*", cors());
 
 app.use(express.json());
 

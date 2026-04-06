@@ -22,11 +22,33 @@ console.log("✅ ZELTYO BACKEND V2 chargé");
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://127.0.0.1:5173",
   "http://localhost:5174",
+  "http://127.0.0.1:5174",
+  "https://zeltyo.netlify.app",
+  "https://zeltyo-clients.netlify.app",
+  "https://zeltyo-merchant.netlify.app",
   process.env.CLIENT_APP_URL,
   process.env.MERCHANT_APP_URL,
 ].filter(Boolean);
 
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(
   cors({
     origin(origin, callback) {

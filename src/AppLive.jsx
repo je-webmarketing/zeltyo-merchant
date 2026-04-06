@@ -951,6 +951,13 @@ applyBusinessConfig(auth.user.businessId);
 setShowForgot(false);
 setForgotEmail("");
 console.log("FORGOT PASSWORD RESPONSE:", data);
+console.log("FORGOT PASSWORD RESPONSE:", data);
+
+if (!data.resetToken) {
+  showNotification("Token de réinitialisation manquant");
+  return;
+}
+
 window.location.href = `/reset-password?token=${data.resetToken}`;
   } catch (error) {
     console.error(error);

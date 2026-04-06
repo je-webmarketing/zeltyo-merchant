@@ -1,13 +1,21 @@
 export async function sendPush({ title, message, externalIds }) {
   try {
+    const appId = String(process.env.ONESIGNAL_APP_ID || "").trim();
+    const apiKey = String(process.env.ONESIGNAL_API_KEY || "").trim();
+
+    if (!appId) throw new Error("ONESIGNAL_APP_ID manquant");
+    if (!apiKey) throw new Error("ONESIGNAL_API_KEY manquant");
+
+    console.log("ONESIGNAL_APP_ID =", JSON.stringify(appId));
+
     const response = await fetch("https://api.onesignal.com/notifications?c=push", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Key ${process.env.ONESIGNAL_API_KEY}`,
+        Authorization: `Key ${apiKey}`,
       },
       body: JSON.stringify({
-        app_id: process.env.ONESIGNAL_APP_ID,
+        app_id: appId,
         target_channel: "push",
         include_aliases: {
           external_id: externalIds,
@@ -31,14 +39,20 @@ export async function sendPush({ title, message, externalIds }) {
 
 export async function sendNotificationToSubscription(subscriptionId, message) {
   try {
+    const appId = String(process.env.ONESIGNAL_APP_ID || "").trim();
+    const apiKey = String(process.env.ONESIGNAL_API_KEY || "").trim();
+
+    if (!appId) throw new Error("ONESIGNAL_APP_ID manquant");
+    if (!apiKey) throw new Error("ONESIGNAL_API_KEY manquant");
+
     const response = await fetch("https://api.onesignal.com/notifications?c=push", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Key ${process.env.ONESIGNAL_API_KEY}`,
+        Authorization: `Key ${apiKey}`,
       },
       body: JSON.stringify({
-        app_id: process.env.ONESIGNAL_APP_ID,
+        app_id: appId,
         target_channel: "push",
         include_subscription_ids: [subscriptionId],
         headings: { fr: "Zeltyo", en: "Zeltyo" },

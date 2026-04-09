@@ -18,7 +18,7 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-console.log("✅ ZELTYO BACKEND V2 chargé");
+console.log("✅ ZELTYO BACKEND CORS FIX");
 
 const allowedOrigins = [
   "http://localhost:5173",
@@ -32,21 +32,14 @@ const allowedOrigins = [
   process.env.MERCHANT_APP_URL,
 ].filter(Boolean);
 
-console.log("✅ Allowed origins:", allowedOrigins);
-
 const corsOptions = {
   origin: (origin, callback) => {
-    console.log("🌍 Origin reçue:", origin);
+    console.log("🌍 Origin:", origin);
 
-    if (!origin) {
-      return callback(null, true);
-    }
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
+    return callback(new Error(`CORS blocked: ${origin}`));
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -62,7 +55,7 @@ app.get("/health", (req, res) => {
   res.json({
     ok: true,
     service: "zeltyo-backend",
-    version: "CORS_FIX_01"
+    version: "CORS_FIX_01",
   });
 });
 
@@ -70,7 +63,7 @@ app.get("/", (req, res) => {
   res.json({
     ok: true,
     message: "Zeltyo backend OK",
-    version: "CORS_FIX_01"
+    version: "CORS_FIX_01",
   });
 });
 
@@ -89,52 +82,35 @@ app.get("/test-push", async (req, res) => {
       externalIds: ["0600000000"],
     });
 
-    res.json({
-      ok: true,
-      result,
-    });
+    res.json({ ok: true, result });
   } catch (error) {
     console.error("❌ Erreur test push :", error);
-    res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
+    res.status(500).json({ ok: false, error: error.message });
   }
 });
 
 cron.schedule("0 10 * * *", async () => {
-  console.log("⏰ Lancement automatique daily 10h");
+  console.log("⏰ Lancement daily");
 
   try {
-    const inactiveResults = await runSegmentedAutomation("inactive");
-    console.log("✅ Inactifs :", inactiveResults.length);
-
-    const loyalResults = await runSegmentedAutomation("loyal");
-    console.log("✅ Loyal :", loyalResults.length);
-
-    const vipResults = await runSegmentedAutomation("vip");
-    console.log("✅ VIP :", vipResults.length);
+    await runSegmentedAutomation("inactive");
+    await runSegmentedAutomation("loyal");
+    await runSegmentedAutomation("vip");
   } catch (error) {
-    console.error("❌ Erreur cron daily :", error);
+    console.error("❌ Erreur cron :", error);
   }
 });
 
 app.use((err, req, res, next) => {
-  console.error("❌ Erreur serveur :", err.message);
+  console.error("❌ Erreur:", err.message);
 
-  if (err.message?.startsWith("CORS blocked")) {
-    return res.status(403).json({
-      ok: false,
-      error: err.message,
-    });
+  if (err.message?.includes("CORS")) {
+    return res.status(403).json({ ok: false, error: err.message });
   }
 
-  return res.status(500).json({
-    ok: false,
-    error: "Erreur interne serveur",
-  });
+  res.status(500).json({ ok: false, error: "Erreur serveur" });
 });
 
 app.listen(port, () => {
-  console.log(`✅ Backend lancé sur le port ${port}`);
+  console.log(`✅ Backend lancé sur ${port}`);
 });

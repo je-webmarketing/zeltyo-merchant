@@ -305,15 +305,6 @@ export default function App() {
     }
   }
 
-  const rawMerchantContact = localStorage.getItem(STORAGE_MERCHANT_CONTACT);
-if (rawMerchantContact) {
-  const parsedMerchantContact = JSON.parse(rawMerchantContact);
-  setMerchantContact(parsedMerchantContact);
-
-  if (parsedMerchantContact.shopName) {
-    setBusinessName(parsedMerchantContact.shopName);
-  }
-}
 
   function handleLogout() {
     localStorage.removeItem(STORAGE_AUTH);
@@ -689,7 +680,35 @@ if (rawMerchantContact) {
     }
   };
 
+
+  const raw = localStorage.getItem(STORAGE_AUTH);
+  if (!raw) return;
+
+  
 useEffect(() => {
+  const raw = localStorage.getItem(STORAGE_AUTH);
+
+  if (raw) {
+    try {
+      const auth = JSON.parse(raw);
+
+      if (auth?.token && auth?.user) {
+        setCurrentUser({
+          name: auth.user.name,
+          role: auth.user.role === "merchant_admin" ? "admin" : "employee",
+          email: auth.user.email,
+          businessId: auth.user.businessId,
+        });
+
+        applyBusinessConfig(auth.user.businessId);
+        setIsAuthenticated(true);
+      }
+    } catch (error) {
+      console.error("Erreur lecture session:", error);
+      localStorage.removeItem(STORAGE_AUTH);
+    }
+  }
+
   const rawMerchantContact = localStorage.getItem(STORAGE_MERCHANT_CONTACT);
 
   if (rawMerchantContact) {
@@ -704,41 +723,9 @@ useEffect(() => {
       console.error("Erreur lecture coordonnées commerçant:", error);
     }
   }
-
-  const raw = localStorage.getItem(STORAGE_AUTH);
-  if (!raw) return;
-
-  try {
-    const auth = JSON.parse(raw);
-
-    if (auth?.token && auth?.user) {
-      setCurrentUser({
-        name: auth.user.name,
-        role: auth.user.role === "merchant_admin" ? "admin" : "employee",
-        email: auth.user.email,
-        businessId: auth.user.businessId,
-      });
-
-      applyBusinessConfig(auth.user.businessId);
-      setIsAuthenticated(true);
-
-      const rawMerchantContact = localStorage.getItem(STORAGE_MERCHANT_CONTACT);
-      if (rawMerchantContact) {
-        const parsedMerchantContact = JSON.parse(rawMerchantContact);
-        setMerchantContact(parsedMerchantContact);
-
-        if (parsedMerchantContact.shopName) {
-          setBusinessName(parsedMerchantContact.shopName);
-        }
-      }
-    }
-  } catch (error) {
-    console.error("Erreur lecture session:", error);
-    localStorage.removeItem(STORAGE_AUTH);
-  }
 }, []);
 
-  function handleSaveMerchantContact() {
+function handleSaveMerchantContact() {
   try {
     const payload = {
       ...merchantContact,
@@ -761,17 +748,13 @@ useEffect(() => {
       setBusinessName(payload.shopName);
     }
 
-    addLog(
-      "A mis à jour les coordonnées du commerce",
-      payload.shopName || "Coordonnées commerçant"
-    );
-
-    showNotification("Coordonnées du commerçant enregistrées");
+    showNotification("Coordonnées enregistrées");
   } catch (error) {
     console.error("Erreur sauvegarde coordonnées :", error);
-    showNotification("Impossible d’enregistrer les coordonnées");
+    showNotification("Erreur sauvegarde");
   }
 }
+ 
 
   const socialPreview = `🎁 ${
     promo.title || "Votre offre fidélité"

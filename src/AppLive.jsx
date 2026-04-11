@@ -533,6 +533,31 @@ export default function App() {
     showNotification("Statut de la promotion mis à jour");
   }
 
+  function archivePromotion(promoId) {
+  if (currentUser.role !== "admin") {
+    showNotification("Seul l’administrateur peut archiver une promotion");
+    return;
+  }
+
+  const targetPromo = promotions.find((p) => p.id === promoId);
+  if (!targetPromo) return;
+
+  setPromotions((prev) =>
+    prev.map((p) =>
+      p.id === promoId
+        ? {
+            ...p,
+            status: "Archivée",
+            archivedAt: getNowLabel(),
+          }
+        : p
+    )
+  );
+
+  addLog("A archivé une promotion", `${targetPromo.title}`);
+  showNotification("Promotion archivée");
+}
+
   function generateMessage(customer) {
     const remaining = rewardGoal - (customer.points % rewardGoal || rewardGoal);
 
@@ -1202,6 +1227,18 @@ brandText: {
       cursor: "pointer",
       marginTop: "10px",
     },
+    buttonDanger: {
+  width: "100%",
+  border: "none",
+  background: "linear-gradient(135deg, #C94B32, #E06A4C)",
+  color: "#FFFFFF",
+  padding: "14px 16px",
+  borderRadius: "14px",
+  fontWeight: 900,
+  cursor: "pointer",
+  boxShadow: "0 12px 24px rgba(201,75,50,0.18)",
+  marginTop: "12px",
+},
     helper: {
       marginTop: "14px",
       color: COLORS.textSoft,
@@ -1476,6 +1513,82 @@ loginLogo: {
       maxWidth: "760px",
     },
   };
+
+ function resetBusinessData(newShopName = "Mon Commerce") {
+  setBusinessName(newShopName);
+  setRewardGoal(10);
+  setRewardLabel("1 boisson offerte");
+  setPrimaryColor("#D4AF37");
+
+  setLocationSettings({
+    country: "CH",
+    city: "Genève",
+    zoneLabel: "Genève Centre",
+    latitude: "46.2044",
+    longitude: "6.1432",
+    radiusKm: "1.5",
+  });
+
+  setMerchantContact({
+    shopName: newShopName,
+    ownerName: "",
+    phone: "",
+    email: "",
+    address: "",
+    postalCode: "",
+    city: "",
+    country: "CH",
+    website: "",
+    vatNumber: "",
+  });
+
+  setCustomers([]);
+  setPromotions([]);
+  setEmployees([]);
+  setActivityLog([]);
+
+  setNewCustomer({
+    name: "",
+    email: "",
+    phone: "",
+  });
+
+  setPromo({
+    title: "",
+    code: "",
+    description: "",
+    channel: "Instagram",
+  });
+
+  setNewEmployee({
+    name: "",
+    email: "",
+    role: "employee",
+  });
+
+  setScanId("");
+  setSearch("");
+
+  localStorage.removeItem(STORAGE_MERCHANT_CONTACT);
+}
+
+function handleCreateNewBusiness() {
+  const confirmed = window.confirm(
+    "Créer une nouvelle entreprise va réinitialiser les clients, promotions, employés, journal d’activité et réglages actuels. Continuer ?"
+  );
+
+  if (!confirmed) return;
+
+  const nextShopName =
+    merchantContact.shopName?.trim() || "Nouvelle entreprise";
+
+  resetBusinessData(nextShopName);
+  showNotification("Nouvelle entreprise initialisée");
+}
+
+const activePromotionList = promotions.filter((p) => p.status === "Active");
+const pausedPromotionList = promotions.filter((p) => p.status === "Pause");
+const archivedPromotionList = promotions.filter((p) => p.status === "Archivée");
 
   if (!isAuthenticated) {
     return (
@@ -2049,399 +2162,519 @@ loginLogo: {
           </>
         )}
 
-        {activeTab === "clients" && (
-          <div style={styles.card}>
-            <h3 style={styles.cardTitle}>Base clients</h3>
+       {activeTab === "clients" && (
+  <div style={styles.card}>
+    <h3 style={styles.cardTitle}>Base clients</h3>
 
-            <div style={styles.searchWrap}>
-              <input
-                style={styles.input}
-                placeholder="Rechercher un client par nom, email ou identifiant"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <div style={styles.previewBox}>
-                <strong>Vue rapide</strong>
-                <p style={{ marginBottom: 0 }}>
-                  Clients affichés : {filteredCustomers.length}
-                </p>
-              </div>
+    <div style={styles.searchWrap}>
+      <input
+        style={styles.input}
+        placeholder="Rechercher un client par nom, email ou identifiant"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      <div style={styles.previewBox}>
+        <strong>Vue rapide</strong>
+        <p style={{ marginBottom: 0 }}>
+          Clients affichés : {filteredCustomers.length}
+        </p>
+      </div>
+    </div>
+
+    <div style={styles.customerGrid}>
+      {filteredCustomers.map((customer) => (
+        <div key={customer.id} style={styles.customerCard}>
+          <div style={styles.rowBetween}>
+            <div>
+              <div style={{ fontWeight: 900 }}>{customer.name}</div>
+              <div style={styles.muted}>{customer.id}</div>
             </div>
-
-            <div style={styles.customerGrid}>
-              {filteredCustomers.map((customer) => (
-                <div key={customer.id} style={styles.customerCard}>
-                  <div style={styles.rowBetween}>
-                    <div>
-                      <div style={{ fontWeight: 900 }}>{customer.name}</div>
-                      <div style={styles.muted}>{customer.id}</div>
-                    </div>
-                    <span style={styles.badge}>{customer.tier}</span>
-                  </div>
-
-                  <div style={styles.fakeQrWrap}>
-                    <FakeQr value={customer.id} />
-                    <div
-                      style={{
-                        marginTop: "10px",
-                        fontSize: "12px",
-                        color: COLORS.textSoft,
-                      }}
-                    >
-                      Carte fidélité digitale
-                    </div>
-                  </div>
-
-                  <div style={styles.kpiLine}>
-                    <div>
-                      Email : <strong>{customer.email || "Non renseigné"}</strong>
-                    </div>
-                    <div>
-                      Téléphone :{" "}
-                      <strong>{customer.phone || "Non renseigné"}</strong>
-                    </div>
-                    <div>
-                      Points : <strong>{customer.points}</strong>
-                    </div>
-                    <div>
-                      Visites : <strong>{customer.visits}</strong>
-                    </div>
-                    <div>
-                      Récompenses : <strong>{customer.rewardsAvailable}</strong>
-                    </div>
-                    <div>
-                      Dernière visite : <strong>{customer.lastVisit}</strong>
-                    </div>
-                  </div>
-
-                  <button
-                    style={styles.buttonReward}
-                    onClick={() => useReward(customer.id)}
-                    disabled={customer.rewardsAvailable <= 0}
-                  >
-                    Utiliser une récompense
-                  </button>
-
-                  <button
-                    style={styles.buttonSecondary}
-                    onClick={() => {
-                      navigator.clipboard.writeText(generateMessage(customer));
-                      addLog(
-                        "A copié un message client",
-                        `${customer.name} (${customer.id})`
-                      );
-                      showNotification("Message client copié");
-                    }}
-                  >
-                    Copier message client
-                  </button>
-
-                  <button
-                    style={styles.buttonWhatsapp}
-                    onClick={() => openWhatsApp(customer)}
-                  >
-                    Envoyer via WhatsApp
-                  </button>
-                </div>
-              ))}
-            </div>
+            <span style={styles.badge}>{customer.tier}</span>
           </div>
-        )}
 
-        {activeTab === "promos" && (
-          <div style={styles.grid2}>
+          <div style={styles.fakeQrWrap}>
+            <FakeQr value={customer.id} />
             <div
               style={{
-                ...styles.card,
-                gridColumn: "1 / -1",
+                marginTop: "10px",
+                fontSize: "12px",
+                color: COLORS.textSoft,
               }}
             >
-              <h3 style={styles.cardTitle}>Segmentation intelligente</h3>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "10px",
-                  marginBottom: "12px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <button
-                  onClick={
-                    currentUser.role === "admin"
-                      ? () => sendSmart("inactive")
-                      : undefined
-                  }
-                  disabled={currentUser.role !== "admin"}
-                  style={styles.buttonGhost}
-                >
-                  🔁 Inactifs
-                </button>
-
-                <button
-                  onClick={
-                    currentUser.role === "admin"
-                      ? () => sendSmart("vip")
-                      : undefined
-                  }
-                  disabled={currentUser.role !== "admin"}
-                  style={styles.buttonGhost}
-                >
-                  💎 VIP
-                </button>
-
-                <button
-                  onClick={
-                    currentUser.role === "admin"
-                      ? () => sendSmart("near_reward")
-                      : undefined
-                  }
-                  disabled={currentUser.role !== "admin"}
-                  style={styles.buttonGhost}
-                >
-                  🎁 Presque récompense
-                </button>
-              </div>
-
-              <p style={styles.helper}>
-                Envoyez une promotion ciblée selon le comportement client :
-                clients inactifs, VIP ou proches d’une récompense.
-              </p>
-            </div>
-
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Gérer les promotions</h3>
-              <div style={{ marginBottom: "14px" }}>
-                <span
-                  style={
-                    currentUser.role === "admin"
-                      ? styles.badgeGreen
-                      : styles.badgeOrange
-                  }
-                >
-                  {currentUser.role === "admin"
-                    ? "Vous pouvez créer et modifier les promotions"
-                    : "Mode employé : consultation uniquement"}
-                </span>
-              </div>
-              <input
-                style={styles.input}
-                placeholder="Titre de l'offre"
-                value={promo.title}
-                onChange={(e) => setPromo({ ...promo, title: e.target.value })}
-                disabled={currentUser.role !== "admin"}
-              />
-              <input
-                style={styles.input}
-                placeholder="Code promotionnel"
-                value={promo.code}
-                onChange={(e) => setPromo({ ...promo, code: e.target.value })}
-                disabled={currentUser.role !== "admin"}
-              />
-              <select
-                style={styles.input}
-                value={promo.channel}
-                onChange={(e) => setPromo({ ...promo, channel: e.target.value })}
-                disabled={currentUser.role !== "admin"}
-              >
-                <option>Instagram</option>
-                <option>Facebook</option>
-                <option>WhatsApp</option>
-                <option>Email</option>
-                <option>En boutique</option>
-              </select>
-              <textarea
-                style={styles.textarea}
-                placeholder="Description claire et orientée bénéfice"
-                value={promo.description}
-                onChange={(e) =>
-                  setPromo({ ...promo, description: e.target.value })
-                }
-                disabled={currentUser.role !== "admin"}
-              />
-              <button style={styles.buttonFull} onClick={addPromotion}>
-                Publier la promotion
-              </button>
-              <p style={styles.helper}>
-                Le commerçant reste autonome pour gérer ses promotions.
-                L’administrateur conserve le contrôle sur la création, la mise en
-                pause et le suivi de chaque offre.
-              </p>
-            </div>
-
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Aperçu du message</h3>
-              <div style={styles.previewBox}>
-                <div style={{ whiteSpace: "pre-line", lineHeight: 1.7 }}>
-                  {socialPreview}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ ...styles.card, gridColumn: "1 / -1" }}>
-              <h3 style={styles.cardTitle}>Promotions publiées</h3>
-              {promotions.map((promotion) => (
-                <div key={promotion.id} style={styles.promoCard}>
-                  <div style={styles.rowBetween}>
-                    <div>
-                      <div style={styles.promoTitle}>{promotion.title}</div>
-                      <div style={styles.muted}>
-                        Canal : {promotion.channel} • Code : {promotion.code}
-                      </div>
-                      <div style={styles.muted}>
-                        Créée par : {promotion.createdBy} • {promotion.createdAt}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      <span
-                        style={
-                          promotion.status === "Active"
-                            ? styles.badgeGreen
-                            : styles.badgeOrange
-                        }
-                      >
-                        {promotion.status}
-                      </span>
-                      <button
-                        style={{ ...styles.buttonGhost, padding: "8px 12px" }}
-                        onClick={() => togglePromotionStatus(promotion.id)}
-                      >
-                        {promotion.status === "Active"
-                          ? "Mettre en pause"
-                          : "Réactiver"}
-                      </button>
-                    </div>
-                  </div>
-                  <p style={{ marginBottom: 0, lineHeight: 1.7 }}>
-                    {promotion.description}
-                  </p>
-                </div>
-              ))}
+              Carte fidélité digitale
             </div>
           </div>
-        )}
 
-        {activeTab === "team" && (
-          <div style={styles.grid2}>
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Équipe</h3>
-              <div style={{ marginBottom: "18px" }}>
+          <div style={styles.kpiLine}>
+            <div>
+              Email : <strong>{customer.email || "Non renseigné"}</strong>
+            </div>
+            <div>
+              Téléphone :{" "}
+              <strong>{customer.phone || "Non renseigné"}</strong>
+            </div>
+            <div>
+              Points : <strong>{customer.points}</strong>
+            </div>
+            <div>
+              Visites : <strong>{customer.visits}</strong>
+            </div>
+            <div>
+              Récompenses : <strong>{customer.rewardsAvailable}</strong>
+            </div>
+            <div>
+              Dernière visite : <strong>{customer.lastVisit}</strong>
+            </div>
+          </div>
+
+          <button
+            style={styles.buttonReward}
+            onClick={() => useReward(customer.id)}
+            disabled={customer.rewardsAvailable <= 0}
+          >
+            Utiliser une récompense
+          </button>
+
+          <button
+            style={styles.buttonSecondary}
+            onClick={() => {
+              navigator.clipboard.writeText(generateMessage(customer));
+              addLog(
+                "A copié un message client",
+                `${customer.name} (${customer.id})`
+              );
+              showNotification("Message client copié");
+            }}
+          >
+            Copier message client
+          </button>
+
+          <button
+            style={styles.buttonWhatsapp}
+            onClick={() => openWhatsApp(customer)}
+          >
+            Envoyer via WhatsApp
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+{activeTab === "promos" && (
+  <div style={styles.grid2}>
+    <div
+      style={{
+        ...styles.card,
+        gridColumn: "1 / -1",
+      }}
+    >
+      <h3 style={styles.cardTitle}>Segmentation intelligente</h3>
+
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "12px",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={
+            currentUser.role === "admin"
+              ? () => sendSmart("inactive")
+              : undefined
+          }
+          disabled={currentUser.role !== "admin"}
+          style={styles.buttonGhost}
+        >
+          🔁 Inactifs
+        </button>
+
+        <button
+          onClick={
+            currentUser.role === "admin"
+              ? () => sendSmart("vip")
+              : undefined
+          }
+          disabled={currentUser.role !== "admin"}
+          style={styles.buttonGhost}
+        >
+          💎 VIP
+        </button>
+
+        <button
+          onClick={
+            currentUser.role === "admin"
+              ? () => sendSmart("near_reward")
+              : undefined
+          }
+          disabled={currentUser.role !== "admin"}
+          style={styles.buttonGhost}
+        >
+          🎁 Presque récompense
+        </button>
+      </div>
+
+      <p style={styles.helper}>
+        Envoyez une promotion ciblée selon le comportement client : clients
+        inactifs, VIP ou proches d’une récompense.
+      </p>
+    </div>
+
+    <div style={styles.card}>
+      <h3 style={styles.cardTitle}>Gérer les promotions</h3>
+      <div style={{ marginBottom: "14px" }}>
+        <span
+          style={
+            currentUser.role === "admin"
+              ? styles.badgeGreen
+              : styles.badgeOrange
+          }
+        >
+          {currentUser.role === "admin"
+            ? "Vous pouvez créer et modifier les promotions"
+            : "Mode employé : consultation uniquement"}
+        </span>
+      </div>
+
+      <input
+        style={styles.input}
+        placeholder="Titre de l'offre"
+        value={promo.title}
+        onChange={(e) => setPromo({ ...promo, title: e.target.value })}
+        disabled={currentUser.role !== "admin"}
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Code promotionnel"
+        value={promo.code}
+        onChange={(e) => setPromo({ ...promo, code: e.target.value })}
+        disabled={currentUser.role !== "admin"}
+      />
+
+      <select
+        style={styles.input}
+        value={promo.channel}
+        onChange={(e) => setPromo({ ...promo, channel: e.target.value })}
+        disabled={currentUser.role !== "admin"}
+      >
+        <option>Instagram</option>
+        <option>Facebook</option>
+        <option>WhatsApp</option>
+        <option>Email</option>
+        <option>En boutique</option>
+      </select>
+
+      <textarea
+        style={styles.textarea}
+        placeholder="Description claire et orientée bénéfice"
+        value={promo.description}
+        onChange={(e) =>
+          setPromo({ ...promo, description: e.target.value })
+        }
+        disabled={currentUser.role !== "admin"}
+      />
+
+      <button style={styles.buttonFull} onClick={addPromotion}>
+        Publier la promotion
+      </button>
+
+      <p style={styles.helper}>
+        Le commerçant reste autonome pour gérer ses promotions. L’administrateur
+        conserve le contrôle sur la création, la mise en pause et le suivi de
+        chaque offre.
+      </p>
+    </div>
+
+    <div style={styles.card}>
+      <h3 style={styles.cardTitle}>Aperçu du message</h3>
+      <div style={styles.previewBox}>
+        <div style={{ whiteSpace: "pre-line", lineHeight: 1.7 }}>
+          {socialPreview}
+        </div>
+      </div>
+    </div>
+
+    <div style={{ ...styles.card, gridColumn: "1 / -1" }}>
+      <h3 style={styles.cardTitle}>Historique des promotions</h3>
+
+      {activePromotionList.length > 0 && (
+        <>
+          <h4 style={{ ...styles.sectionTitle, fontSize: "18px" }}>
+            Promotions actives
+          </h4>
+          {activePromotionList.map((promotion) => (
+            <div key={promotion.id} style={styles.promoCard}>
+              <div style={styles.rowBetween}>
+                <div>
+                  <div style={styles.promoTitle}>{promotion.title}</div>
+                  <div style={styles.muted}>
+                    Canal : {promotion.channel} • Code : {promotion.code}
+                  </div>
+                  <div style={styles.muted}>
+                    Créée par : {promotion.createdBy} • {promotion.createdAt}
+                  </div>
+                </div>
+
+                <div
+                  style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
+                >
+                  <span style={styles.badgeGreen}>{promotion.status}</span>
+
+                  <button
+                    style={{ ...styles.buttonGhost, padding: "8px 12px" }}
+                    onClick={() => togglePromotionStatus(promotion.id)}
+                  >
+                    Mettre en pause
+                  </button>
+
+                  <button
+                    style={{ ...styles.buttonGhost, padding: "8px 12px" }}
+                    onClick={() => archivePromotion(promotion.id)}
+                  >
+                    Archiver
+                  </button>
+                </div>
+              </div>
+
+              <p style={{ marginBottom: 0, lineHeight: 1.7 }}>
+                {promotion.description}
+              </p>
+            </div>
+          ))}
+        </>
+      )}
+
+      {pausedPromotionList.length > 0 && (
+        <>
+          <h4
+            style={{
+              ...styles.sectionTitle,
+              fontSize: "18px",
+              marginTop: "18px",
+            }}
+          >
+            Promotions en pause
+          </h4>
+          {pausedPromotionList.map((promotion) => (
+            <div key={promotion.id} style={styles.promoCard}>
+              <div style={styles.rowBetween}>
+                <div>
+                  <div style={styles.promoTitle}>{promotion.title}</div>
+                  <div style={styles.muted}>
+                    Canal : {promotion.channel} • Code : {promotion.code}
+                  </div>
+                  <div style={styles.muted}>
+                    Créée par : {promotion.createdBy} • {promotion.createdAt}
+                  </div>
+                </div>
+
+                <div
+                  style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
+                >
+                  <span style={styles.badgeOrange}>{promotion.status}</span>
+
+                  <button
+                    style={{ ...styles.buttonGhost, padding: "8px 12px" }}
+                    onClick={() => togglePromotionStatus(promotion.id)}
+                  >
+                    Réactiver
+                  </button>
+
+                  <button
+                    style={{ ...styles.buttonGhost, padding: "8px 12px" }}
+                    onClick={() => archivePromotion(promotion.id)}
+                  >
+                    Archiver
+                  </button>
+                </div>
+              </div>
+
+              <p style={{ marginBottom: 0, lineHeight: 1.7 }}>
+                {promotion.description}
+              </p>
+            </div>
+          ))}
+        </>
+      )}
+
+      {archivedPromotionList.length > 0 && (
+        <>
+          <h4
+            style={{
+              ...styles.sectionTitle,
+              fontSize: "18px",
+              marginTop: "18px",
+            }}
+          >
+            Promotions archivées
+          </h4>
+          {archivedPromotionList.map((promotion) => (
+            <div key={promotion.id} style={styles.promoCard}>
+              <div style={styles.rowBetween}>
+                <div>
+                  <div style={styles.promoTitle}>{promotion.title}</div>
+                  <div style={styles.muted}>
+                    Canal : {promotion.channel} • Code : {promotion.code}
+                  </div>
+                  <div style={styles.muted}>
+                    Créée par : {promotion.createdBy} • {promotion.createdAt}
+                  </div>
+                  {promotion.archivedAt && (
+                    <div style={styles.muted}>
+                      Archivée le : {promotion.archivedAt}
+                    </div>
+                  )}
+                </div>
+
+                <span style={styles.badge}>Archivée</span>
+              </div>
+
+              <p style={{ marginBottom: 0, lineHeight: 1.7 }}>
+                {promotion.description}
+              </p>
+            </div>
+          ))}
+        </>
+      )}
+
+      {promotions.length === 0 && (
+        <p style={styles.muted}>
+          Aucune promotion enregistrée pour le moment.
+        </p>
+      )}
+    </div>
+  </div>
+)}
+
+{activeTab === "team" && (
+  <div style={styles.grid2}>
+    <div style={styles.card}>
+      <h3 style={styles.cardTitle}>Équipe</h3>
+      <div style={{ marginBottom: "18px" }}>
+        <span
+          style={
+            currentUser.role === "admin"
+              ? styles.badgeGreen
+              : styles.badgeOrange
+          }
+        >
+          {currentUser.role === "admin"
+            ? "Vous pouvez ajouter un employé ou un administrateur"
+            : "Mode employé : consultation uniquement"}
+        </span>
+      </div>
+
+      <input
+        style={styles.input}
+        placeholder="Nom du membre"
+        value={newEmployee.name}
+        onChange={(e) =>
+          setNewEmployee({ ...newEmployee, name: e.target.value })
+        }
+        disabled={currentUser.role !== "admin"}
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Email du membre"
+        value={newEmployee.email}
+        onChange={(e) =>
+          setNewEmployee({ ...newEmployee, email: e.target.value })
+        }
+        disabled={currentUser.role !== "admin"}
+      />
+
+      <select
+        style={styles.input}
+        value={newEmployee.role}
+        onChange={(e) =>
+          setNewEmployee({ ...newEmployee, role: e.target.value })
+        }
+        disabled={currentUser.role !== "admin"}
+      >
+        <option value="employee">Employé</option>
+        <option value="admin">Administrateur</option>
+      </select>
+
+      <button style={styles.buttonFull} onClick={addEmployee}>
+        Ajouter un employé ou un administrateur
+      </button>
+
+      <div style={{ ...styles.tableLike, marginTop: "20px" }}>
+        {employees.map((employee) => (
+          <div key={employee.id} style={styles.promoCard}>
+            <div style={styles.rowBetween}>
+              <div>
+                <div style={{ fontWeight: 900 }}>{employee.name}</div>
+                <div style={styles.muted}>
+                  {employee.id} • {employee.email}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
                 <span
                   style={
-                    currentUser.role === "admin"
+                    employee.role === "admin"
                       ? styles.badgeGreen
-                      : styles.badgeOrange
+                      : styles.badgeBlue
                   }
                 >
-                  {currentUser.role === "admin"
-                    ? "Vous pouvez ajouter un employé ou un administrateur"
-                    : "Mode employé : consultation uniquement"}
+                  {employee.role === "admin"
+                    ? "Administrateur"
+                    : "Employé"}
                 </span>
-              </div>
-
-              <input
-                style={styles.input}
-                placeholder="Nom du membre"
-                value={newEmployee.name}
-                onChange={(e) =>
-                  setNewEmployee({ ...newEmployee, name: e.target.value })
-                }
-                disabled={currentUser.role !== "admin"}
-              />
-              <input
-                style={styles.input}
-                placeholder="Email du membre"
-                value={newEmployee.email}
-                onChange={(e) =>
-                  setNewEmployee({ ...newEmployee, email: e.target.value })
-                }
-                disabled={currentUser.role !== "admin"}
-              />
-              <select
-                style={styles.input}
-                value={newEmployee.role}
-                onChange={(e) =>
-                  setNewEmployee({ ...newEmployee, role: e.target.value })
-                }
-                disabled={currentUser.role !== "admin"}
-              >
-                <option value="employee">Employé</option>
-                <option value="admin">Administrateur</option>
-              </select>
-              <button style={styles.buttonFull} onClick={addEmployee}>
-                Ajouter un employé ou un administrateur
-              </button>
-
-              <div style={{ ...styles.tableLike, marginTop: "20px" }}>
-                {employees.map((employee) => (
-                  <div key={employee.id} style={styles.promoCard}>
-                    <div style={styles.rowBetween}>
-                      <div>
-                        <div style={{ fontWeight: 900 }}>{employee.name}</div>
-                        <div style={styles.muted}>
-                          {employee.id} • {employee.email}
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        <span
-                          style={
-                            employee.role === "admin"
-                              ? styles.badgeGreen
-                              : styles.badgeBlue
-                          }
-                        >
-                          {employee.role === "admin"
-                            ? "Administrateur"
-                            : "Employé"}
-                        </span>
-                        <span style={styles.badge}>{employee.status}</span>
-                      </div>
-                    </div>
-                    <div style={styles.kpiLine}>
-                      Dernière action connue : <strong>{employee.lastAction}</strong>
-                    </div>
-                  </div>
-                ))}
+                <span style={styles.badge}>{employee.status}</span>
               </div>
             </div>
+            <div style={styles.kpiLine}>
+              Dernière action connue :{" "}
+              <strong>{employee.lastAction}</strong>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
 
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Journal de contrôle</h3>
-              <p style={styles.helper}>
-                Cet espace permet à l’administrateur de vérifier la bonne
-                exécution : qui a ajouté un client, validé une visite, créé une
-                promotion, préparé une relance ou ajouté un nouveau membre.
-              </p>
-              <div style={styles.tableLike}>
-                {activityLog.map((item) => (
-                  <div key={item.id} style={styles.promoCard}>
-                    <div style={styles.rowBetween}>
-                      <div>
-                        <div style={{ fontWeight: 900 }}>{item.actor}</div>
-                        <div style={styles.muted}>{item.date}</div>
-                      </div>
-                      <span
-                        style={
-                          item.role === "admin"
-                            ? styles.badgeGreen
-                            : styles.badgeBlue
-                        }
-                      >
-                        {item.role === "admin" ? "Admin" : "Employé"}
-                      </span>
-                    </div>
-                    <div style={styles.kpiLine}>
-                      <div>{item.action}</div>
-                      <div>
-                        <strong>{item.detail}</strong>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+    <div style={styles.card}>
+      <h3 style={styles.cardTitle}>Journal de contrôle</h3>
+      <p style={styles.helper}>
+        Cet espace permet à l’administrateur de vérifier la bonne exécution :
+        qui a ajouté un client, validé une visite, créé une promotion, préparé
+        une relance ou ajouté un nouveau membre.
+      </p>
+      <div style={styles.tableLike}>
+        {activityLog.map((item) => (
+          <div key={item.id} style={styles.promoCard}>
+            <div style={styles.rowBetween}>
+              <div>
+                <div style={{ fontWeight: 900 }}>{item.actor}</div>
+                <div style={styles.muted}>{item.date}</div>
+              </div>
+              <span
+                style={
+                  item.role === "admin"
+                    ? styles.badgeGreen
+                    : styles.badgeBlue
+                }
+              >
+                {item.role === "admin" ? "Admin" : "Employé"}
+              </span>
+            </div>
+            <div style={styles.kpiLine}>
+              <div>{item.action}</div>
+              <div>
+                <strong>{item.detail}</strong>
               </div>
             </div>
           </div>
-        )}
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+
 
         {activeTab === "settings" && (
           <div style={styles.grid2}>
@@ -2542,6 +2775,10 @@ loginLogo: {
 
 <button style={styles.buttonFull} onClick={handleSaveMerchantContact}>
   Enregistrer les coordonnées du commerçant
+</button>
+
+<button style={styles.buttonDanger} onClick={handleCreateNewBusiness}>
+  Créer une nouvelle entreprise et repartir de zéro
 </button>
 
 <p style={styles.helper}>

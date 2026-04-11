@@ -635,56 +635,51 @@ export default function App() {
   };
 
   const sendPromo = async () => {
-    try {
-      const rawAuth = localStorage.getItem(STORAGE_AUTH);
-      if (!rawAuth) {
-        alert("Vous devez être connecté");
-        return;
-      }
-
-      const auth = JSON.parse(rawAuth);
-      const token = auth?.token;
-
-      if (!token) {
-        alert("Session invalide");
-        return;
-      }
-
-      const response = await fetch(
-        buildApiUrl("/notifications-advanced/send-to-subscription"),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            subscriptionId: "a67b1b72-bc4c-431b-a3b8-9bf9d79d3079",
-            message: "🔥 Promo du jour : Croissant + café à -20% ☕🥐",
-          }),
-        }
-      );
-
-      const data = await response.json();
-      console.log("Réponse promo :", data);
-
-      if (!response.ok) {
-        alert("Erreur lors de l'envoi");
-        return;
-      }
-
-      alert("Promo envoyée 🚀");
-    } catch (error) {
-      console.error(error);
-      alert("Erreur réseau");
+  try {
+    const rawAuth = localStorage.getItem(STORAGE_AUTH);
+    if (!rawAuth) {
+      alert("Vous devez être connecté");
+      return;
     }
-  };
 
+    const auth = JSON.parse(rawAuth);
+    const token = auth?.token;
 
-  const raw = localStorage.getItem(STORAGE_AUTH);
-  if (!raw) return;
+    if (!token) {
+      alert("Session invalide");
+      return;
+    }
 
-  
+    const response = await fetch(
+      buildApiUrl("/notifications-advanced/send-to-subscription"),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          subscriptionId: "a67b1b72-bc4c-431b-a3b8-9bf9d79d3079",
+          message: "🔥 Promo du jour : Croissant + café à -20% ☕🥐",
+        }),
+      }
+    );
+
+    const data = await response.json();
+    console.log("Réponse promo :", data);
+
+    if (!response.ok) {
+      alert("Erreur lors de l'envoi");
+      return;
+    }
+
+    alert("Promo envoyée 🚀");
+  } catch (error) {
+    console.error(error);
+    alert("Erreur réseau");
+  }
+};
+
 useEffect(() => {
   const raw = localStorage.getItem(STORAGE_AUTH);
 

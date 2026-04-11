@@ -3,6 +3,8 @@ import { buildApiUrl } from "./config/api";
 
 const STORAGE_AUTH = "zeltyo_merchant_auth";
 
+const STORAGE_MERCHANT_CONTACT = "zeltyo_merchant_contact";
+
 const COLORS = {
   bg: "#050505",
   bgSoft: "#090909",
@@ -171,6 +173,19 @@ export default function App() {
     },
   ]);
 
+  const [merchantContact, setMerchantContact] = useState({
+  shopName: "",
+  ownerName: "",
+  phone: "",
+  email: "",
+  address: "",
+  postalCode: "",
+  city: "",
+  country: "CH",
+  website: "",
+  vatNumber: "",
+});
+
   const [employees, setEmployees] = useState([
     {
       id: "EMP-1",
@@ -289,6 +304,16 @@ export default function App() {
       showNotification("Erreur de connexion au serveur");
     }
   }
+
+  const rawMerchantContact = localStorage.getItem(STORAGE_MERCHANT_CONTACT);
+if (rawMerchantContact) {
+  const parsedMerchantContact = JSON.parse(rawMerchantContact);
+  setMerchantContact(parsedMerchantContact);
+
+  if (parsedMerchantContact.shopName) {
+    setBusinessName(parsedMerchantContact.shopName);
+  }
+}
 
   function handleLogout() {
     localStorage.removeItem(STORAGE_AUTH);
@@ -664,29 +689,89 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_AUTH);
-    if (!raw) return;
+useEffect(() => {
+  const rawMerchantContact = localStorage.getItem(STORAGE_MERCHANT_CONTACT);
 
+  if (rawMerchantContact) {
     try {
-      const auth = JSON.parse(raw);
+      const parsedMerchantContact = JSON.parse(rawMerchantContact);
+      setMerchantContact(parsedMerchantContact);
 
-      if (auth?.token && auth?.user) {
-        setCurrentUser({
-          name: auth.user.name,
-          role: auth.user.role === "merchant_admin" ? "admin" : "employee",
-          email: auth.user.email,
-          businessId: auth.user.businessId,
-        });
-
-        applyBusinessConfig(auth.user.businessId);
-        setIsAuthenticated(true);
+      if (parsedMerchantContact.shopName) {
+        setBusinessName(parsedMerchantContact.shopName);
       }
     } catch (error) {
-      console.error("Erreur lecture session:", error);
-      localStorage.removeItem(STORAGE_AUTH);
+      console.error("Erreur lecture coordonnées commerçant:", error);
     }
-  }, []);
+  }
+
+  const raw = localStorage.getItem(STORAGE_AUTH);
+  if (!raw) return;
+
+  try {
+    const auth = JSON.parse(raw);
+
+    if (auth?.token && auth?.user) {
+      setCurrentUser({
+        name: auth.user.name,
+        role: auth.user.role === "merchant_admin" ? "admin" : "employee",
+        email: auth.user.email,
+        businessId: auth.user.businessId,
+      });
+
+      applyBusinessConfig(auth.user.businessId);
+      setIsAuthenticated(true);
+
+      const rawMerchantContact = localStorage.getItem(STORAGE_MERCHANT_CONTACT);
+      if (rawMerchantContact) {
+        const parsedMerchantContact = JSON.parse(rawMerchantContact);
+        setMerchantContact(parsedMerchantContact);
+
+        if (parsedMerchantContact.shopName) {
+          setBusinessName(parsedMerchantContact.shopName);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Erreur lecture session:", error);
+    localStorage.removeItem(STORAGE_AUTH);
+  }
+}, []);
+
+  function handleSaveMerchantContact() {
+  try {
+    const payload = {
+      ...merchantContact,
+      shopName: merchantContact.shopName.trim(),
+      ownerName: merchantContact.ownerName.trim(),
+      phone: merchantContact.phone.trim(),
+      email: merchantContact.email.trim(),
+      address: merchantContact.address.trim(),
+      postalCode: merchantContact.postalCode.trim(),
+      city: merchantContact.city.trim(),
+      country: merchantContact.country.trim(),
+      website: merchantContact.website.trim(),
+      vatNumber: merchantContact.vatNumber.trim(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem(STORAGE_MERCHANT_CONTACT, JSON.stringify(payload));
+
+    if (payload.shopName) {
+      setBusinessName(payload.shopName);
+    }
+
+    addLog(
+      "A mis à jour les coordonnées du commerce",
+      payload.shopName || "Coordonnées commerçant"
+    );
+
+    showNotification("Coordonnées du commerçant enregistrées");
+  } catch (error) {
+    console.error("Erreur sauvegarde coordonnées :", error);
+    showNotification("Impossible d’enregistrer les coordonnées");
+  }
+}
 
   const socialPreview = `🎁 ${
     promo.title || "Votre offre fidélité"
@@ -2383,6 +2468,119 @@ loginLogo: {
         {activeTab === "settings" && (
           <div style={styles.grid2}>
             <div style={styles.card}>
+             <div style={{ color: "red", fontSize: "32px", fontWeight: 900 }}>
+  TEST COORDONNÉES
+</div> 
+              <h3 style={styles.cardTitle}>Coordonnées du commerçant</h3>
+
+<input
+  style={styles.input}
+  placeholder="Nom du commerce"
+  value={merchantContact.shopName}
+  onChange={(e) =>
+    setMerchantContact({ ...merchantContact, shopName: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="Nom du responsable"
+  value={merchantContact.ownerName}
+  onChange={(e) =>
+    setMerchantContact({ ...merchantContact, ownerName: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="Téléphone"
+  value={merchantContact.phone}
+  onChange={(e) =>
+    setMerchantContact({ ...merchantContact, phone: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="Email"
+  value={merchantContact.email}
+  onChange={(e) =>
+    setMerchantContact({ ...merchantContact, email: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="Adresse"
+  value={merchantContact.address}
+  onChange={(e) =>
+    setMerchantContact({ ...merchantContact, address: e.target.value })
+  }
+/>
+
+<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+  <input
+    style={styles.input}
+    placeholder="Code postal"
+    value={merchantContact.postalCode}
+    onChange={(e) =>
+      setMerchantContact({ ...merchantContact, postalCode: e.target.value })
+    }
+  />
+
+  <input
+    style={styles.input}
+    placeholder="Ville"
+    value={merchantContact.city}
+    onChange={(e) =>
+      setMerchantContact({ ...merchantContact, city: e.target.value })
+    }
+  />
+</div>
+
+<input
+  style={styles.input}
+  placeholder="Pays"
+  value={merchantContact.country}
+  onChange={(e) =>
+    setMerchantContact({ ...merchantContact, country: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="Site web"
+  value={merchantContact.website}
+  onChange={(e) =>
+    setMerchantContact({ ...merchantContact, website: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="N° TVA / identifiant entreprise"
+  value={merchantContact.vatNumber}
+  onChange={(e) =>
+    setMerchantContact({ ...merchantContact, vatNumber: e.target.value })
+  }
+/>
+
+<button style={styles.buttonFull} onClick={handleSaveMerchantContact}>
+  Enregistrer les coordonnées du commerçant
+</button>
+
+<p style={styles.helper}>
+  Ces informations serviront de base pour l’identité du commerce, les futurs
+  documents, les réglages avancés et les écrans publics de l’application.
+</p>
+
+<div
+  style={{
+    height: "1px",
+    background: COLORS.border,
+    margin: "22px 0",
+  }}
+/>
               <h3 style={styles.cardTitle}>Paramètres du programme</h3>
               <input
                 style={styles.input}
@@ -2512,14 +2710,29 @@ loginLogo: {
               >
                 <div style={styles.heroBadge}>Carte de fidélité</div>
                 <h4
-                  style={{
-                    fontSize: "32px",
-                    margin: "10px 0",
-                    fontWeight: 900,
-                  }}
-                >
-                  {businessName}
-                </h4>
+  style={{
+    fontSize: "32px",
+    margin: "10px 0",
+    fontWeight: 900,
+  }}
+>
+  {merchantContact.shopName || businessName}
+</h4>
+<p style={{ lineHeight: 1.7, opacity: 0.95, marginTop: "12px" }}>
+  Responsable : {merchantContact.ownerName || "Non renseigné"}
+</p>
+<p style={{ lineHeight: 1.7, opacity: 0.95 }}>
+  Contact : {merchantContact.phone || "Téléphone non renseigné"} •{" "}
+  {merchantContact.email || "Email non renseigné"}
+</p>
+<p style={{ lineHeight: 1.7, opacity: 0.95, marginBottom: 0 }}>
+  Adresse :{" "}
+  {merchantContact.address
+    ? `${merchantContact.address}, ${merchantContact.postalCode || ""} ${
+        merchantContact.city || ""
+      }, ${merchantContact.country || ""}`
+    : "Adresse non renseignée"}
+</p>
                 <p style={{ lineHeight: 1.7 }}>
                   {rewardGoal} points = {rewardLabel}
                 </p>

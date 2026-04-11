@@ -2468,10 +2468,7 @@ loginLogo: {
         {activeTab === "settings" && (
           <div style={styles.grid2}>
             <div style={styles.card}>
-             <div style={{ color: "red", fontSize: "32px", fontWeight: 900 }}>
-  TEST COORDONNÉES
-</div> 
-              <h3 style={styles.cardTitle}>Coordonnées du commerçant</h3>
+             <h3 style={styles.cardTitle}>Coordonnées du commerçant</h3>
 
 <input
   style={styles.input}

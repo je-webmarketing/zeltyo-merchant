@@ -2,8 +2,8 @@ import { useMemo, useState, useEffect } from "react";
 import { buildApiUrl } from "./config/api";
 
 const STORAGE_AUTH = "zeltyo_merchant_auth";
-
 const STORAGE_MERCHANT_CONTACT = "zeltyo_merchant_contact";
+const STORAGE_PROGRAM_SETTINGS = "zeltyo_program_settings";
 
 const COLORS = {
   bg: "#050505",
@@ -69,10 +69,10 @@ export default function App() {
   const poweredByLabel = "Zeltyo by JE-Webmarketing";
   const poweredByUrl = "https://ericjarry34.systeme.io/je-webmarketing";
 
-  const [businessName, setBusinessName] = useState("Mon Commerce");
-  const [rewardGoal, setRewardGoal] = useState(10);
-  const [rewardLabel, setRewardLabel] = useState("1 boisson offerte");
-  const [primaryColor, setPrimaryColor] = useState("#D4AF37");
+  const [businessName, setBusinessName] = useState("");
+const [rewardGoal, setRewardGoal] = useState("");
+const [rewardLabel, setRewardLabel] = useState("");
+const [primaryColor, setPrimaryColor] = useState("");
   const [search, setSearch] = useState("");
   const [scanId, setScanId] = useState("CL-1001");
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -107,75 +107,17 @@ export default function App() {
 });
 
   const [locationSettings, setLocationSettings] = useState({
-    country: "CH",
-    city: "Genève",
-    zoneLabel: "Genève Centre",
-    latitude: "46.2044",
-    longitude: "6.1432",
-    radiusKm: "1.5",
-  });
+  country: "",
+  city: "",
+  zoneLabel: "",
+  latitude: "",
+  longitude: "",
+  radiusKm: "",
+});
 
-  const [customers, setCustomers] = useState([
-    {
-      id: "CL-1001",
-      name: "Sophie Martin",
-      email: "sophie@email.com",
-      phone: "+41791234567",
-      points: 4,
-      visits: 2,
-      rewardsAvailable: 0,
-      tier: "Bronze",
-      lastVisit: "29/03/2026",
-    },
-    {
-      id: "CL-1002",
-      name: "Nadia Lopez",
-      email: "nadia@email.com",
-      phone: "+41797654321",
-      points: 8,
-      visits: 4,
-      rewardsAvailable: 0,
-      tier: "Argent",
-      lastVisit: "28/03/2026",
-    },
-    {
-      id: "CL-1003",
-      name: "Lucas Bernard",
-      email: "lucas@email.com",
-      phone: "+41795554433",
-      points: 12,
-      visits: 6,
-      rewardsAvailable: 1,
-      tier: "Or",
-      lastVisit: "27/03/2026",
-    },
-  ]);
-
-  const [promotions, setPromotions] = useState([
-    {
-      id: 1,
-      title: "Offre fidélité printemps",
-      code: "PRINTEMPS10",
-      description:
-        "10% de remise pour les clients fidèles sur présentation de leur carte.",
-      channel: "Instagram",
-      status: "Active",
-      createdBy: "Sophie Admin",
-      createdAt: "29/03/2026 09:15",
-    },
-    {
-      id: 2,
-      title: "Récompense boisson offerte",
-      code: "CAFE10",
-      description: "Une boisson offerte après 10 points cumulés.",
-      channel: "En boutique",
-      status: "Active",
-      createdBy: "Sophie Admin",
-      createdAt: "28/03/2026 16:40",
-    },
-  ]);
-
-  const [merchantContact, setMerchantContact] = useState({
+ const [customers, setCustomers] = useState([]);
+const [promotions, setPromotions] = useState([]);
+const [merchantContact, setMerchantContact] = useState({
   shopName: "",
   ownerName: "",
   phone: "",
@@ -183,68 +125,14 @@ export default function App() {
   address: "",
   postalCode: "",
   city: "",
-  country: "CH",
+  country: "",
   website: "",
   vatNumber: "",
   reviewUrl: "",
 });
-
-  const [employees, setEmployees] = useState([
-    {
-      id: "EMP-1",
-      name: "Sophie Admin",
-      role: "admin",
-      status: "Actif",
-      lastAction: "Création promotion",
-      email: "admin@moncommerce.ch",
-      password: "admin123",
-    },
-    {
-      id: "EMP-2",
-      name: "Nadia Employée",
-      role: "employee",
-      status: "Actif",
-      lastAction: "Validation visite client",
-      email: "nadia@moncommerce.ch",
-      password: "employe123",
-    },
-    {
-      id: "EMP-3",
-      name: "Lucas Employé",
-      role: "employee",
-      status: "Actif",
-      lastAction: "Ajout client",
-      email: "lucas@moncommerce.ch",
-      password: "employe123",
-    },
-  ]);
-
-  const [activityLog, setActivityLog] = useState([
-    {
-      id: 1,
-      actor: "Sophie Admin",
-      role: "admin",
-      action: "A créé une promotion",
-      detail: "Offre fidélité printemps",
-      date: "29/03/2026 09:15",
-    },
-    {
-      id: 2,
-      actor: "Nadia Employée",
-      role: "employee",
-      action: "A validé une visite",
-      detail: "Client CL-1002",
-      date: "29/03/2026 10:10",
-    },
-    {
-      id: 3,
-      actor: "Lucas Employé",
-      role: "employee",
-      action: "A ajouté un client",
-      detail: "Client CL-1004",
-      date: "29/03/2026 11:05",
-    },
-  ]);
+const [employees, setEmployees] = useState([]);
+const [activityLog, setActivityLog] = useState([]);
+  
 
   const [newEmployee, setNewEmployee] = useState({
     name: "",
@@ -252,23 +140,23 @@ export default function App() {
     role: "employee",
   });
 
-  function applyBusinessConfig(businessId) {
-    const config = BUSINESS_CONFIG[businessId];
-    if (!config) return;
+ function applyBusinessConfig(businessId) {
+  const config = BUSINESS_CONFIG[businessId];
+  if (!config) return;
 
-    setBusinessName(config.name);
-    setRewardGoal(config.rewardGoal);
-    setRewardLabel(config.rewardLabel);
-    setPrimaryColor(config.primaryColor);
-    setLocationSettings({
-      country: config.country,
-      city: config.city,
-      zoneLabel: config.zoneLabel,
-      latitude: config.latitude,
-      longitude: config.longitude,
-      radiusKm: config.radiusKm,
-    });
-  }
+  setBusinessName(config.name);
+  setRewardGoal(config.rewardGoal);
+  setRewardLabel(config.rewardLabel);
+  setPrimaryColor(config.primaryColor);
+  setLocationSettings({
+    country: config.country,
+    city: config.city,
+    zoneLabel: config.zoneLabel,
+    latitude: config.latitude,
+    longitude: config.longitude,
+    radiusKm: config.radiusKm,
+  });
+}
 
   function saveProgramSettings(settings) {
   localStorage.setItem(STORAGE_PROGRAM_SETTINGS, JSON.stringify(settings));
@@ -316,7 +204,7 @@ function loadProgramSettings() {
         businessId: data.user.businessId,
       });
 
-      applyBusinessConfig(data.user.businessId);
+      // applyBusinessConfig(data.user.businessId);
       setIsAuthenticated(true);
       setNotification("");
     } catch (error) {
@@ -476,6 +364,8 @@ function loadProgramSettings() {
       status: "Active",
       createdBy: currentUser.name,
       createdAt: getNowLabel(),
+      ctaLabel: promo.ctaLabel,
+ctaUrl: promo.ctaUrl,
     };
 
     setPromotions([newPromo, ...promotions]);
@@ -774,24 +664,24 @@ useEffect(() => {
         const savedProgramSettings = loadProgramSettings();
 
         if (savedProgramSettings) {
-          setBusinessName(savedProgramSettings.businessName || "Mon Commerce");
-          setRewardGoal(savedProgramSettings.rewardGoal || 10);
-          setRewardLabel(
-            savedProgramSettings.rewardLabel || "1 boisson offerte"
-          );
-          setPrimaryColor(savedProgramSettings.primaryColor || "#D4AF37");
-          setLocationSettings(
-            savedProgramSettings.locationSettings || {
-              country: "CH",
-              city: "Genève",
-              zoneLabel: "Genève Centre",
-              latitude: "46.2044",
-              longitude: "6.1432",
-              radiusKm: "1.5",
-            }
-          );
+          setBusinessName("");
+setRewardGoal("");
+setRewardLabel("");
+setPrimaryColor("");
+         if (savedProgramSettings?.businessId === auth.user.businessId) {
+  setLocationSettings(savedProgramSettings.locationSettings);
+} else {
+  setLocationSettings({
+    country: "",
+    city: "",
+    zoneLabel: "",
+    latitude: "",
+    longitude: "",
+    radiusKm: "",
+  });
+}
         } else {
-          applyBusinessConfig(auth.user.businessId);
+          // applyBusinessConfig(auth.user.businessId);
         }
 
         setIsAuthenticated(true);
@@ -837,6 +727,7 @@ useEffect(() => {
     rewardLabel,
     primaryColor,
     locationSettings,
+    businessId: currentUser.businessId,
   });
 }, [
   isAuthenticated,
@@ -851,6 +742,8 @@ useEffect(() => {
   if (!isAuthenticated) return;
   localStorage.setItem("zeltyo_promotions", JSON.stringify(promotions));
 }, [isAuthenticated, promotions]);
+
+
 
 function handleSaveMerchantContact() {
   try {
@@ -884,14 +777,24 @@ function handleSaveMerchantContact() {
 }
  
 
-  const socialPreview = `🎁 ${
-    promo.title || "Votre offre fidélité"
-  }\n\n${
-    promo.description ||
-    "Décrivez ici votre promotion en quelques lignes claires et rassurantes."
-  }\n\nPrésentez votre carte fidélité chez ${businessName}.\nCode : ${
-    promo.code || "PROMO10"
-  }`;
+const socialPreview = `🎁 ${
+  promo.title || "Votre offre fidélité"
+}
+
+${
+  promo.description ||
+  "Décrivez ici votre promotion en quelques lignes claires et rassurantes."
+}
+
+Présentez votre carte fidélité chez ${businessName}.
+Code : ${promo.code || "PROMO10"}
+
+${
+  merchantContact.reviewUrl
+    ? `⭐ Donnez votre avis ici :
+${merchantContact.reviewUrl}`
+    : ""
+}`;
 
   const styles = {
     page: {
@@ -1625,18 +1528,18 @@ loginLogo: {
  function resetBusinessData(newShopName = "Mon Commerce") {
   setBusinessName(newShopName);
 
-  setRewardGoal(10);
-  setRewardLabel("1 boisson offerte");
-  setPrimaryColor("#D4AF37");
+  setRewardGoal("");
+  setRewardLabel("");
+  setPrimaryColor("");
 
-  setLocationSettings({
-    country: "CH",
-    city: "Genève",
-    zoneLabel: "Genève Centre",
-    latitude: "46.2044",
-    longitude: "6.1432",
-    radiusKm: "1.5",
-  });
+ setLocationSettings({
+  country: "",
+  city: "",
+  zoneLabel: "",
+  latitude: "",
+  longitude: "",
+  radiusKm: "",
+});
 
   setMerchantContact({
     shopName: newShopName,
@@ -1646,7 +1549,7 @@ loginLogo: {
     address: "",
     postalCode: "",
     city: "",
-    country: "CH",
+    country: "",
     website: "",
     vatNumber: "",
     reviewUrl: "",
@@ -1693,20 +1596,18 @@ function handleCreateNewBusiness() {
     merchantContact.shopName?.trim() || "Nouvelle entreprise";
 
   localStorage.removeItem(STORAGE_MERCHANT_CONTACT);
-  localStorage.removeItem(STORAGE_AUTH);
+  localStorage.removeItem(STORAGE_PROGRAM_SETTINGS);
   localStorage.removeItem("zeltyo_promotions");
-  localStorage.removeItem("zeltyo_program_settings");
 
   resetBusinessData(nextShopName);
-  setIsAuthenticated(false);
 
-  showNotification("Nouvelle entreprise initialisée. Veuillez vous reconnecter.");
+  showNotification("Nouvelle entreprise initialisée");
 }
 
 const activePromotionList = promotions.filter((p) => p.status === "Active");
 const pausedPromotionList = promotions.filter((p) => p.status === "Pause");
 const archivedPromotionList = promotions.filter((p) => p.status === "Archivée");
-const STORAGE_PROGRAM_SETTINGS = "zeltyo_program_settings";
+
 
   if (!isAuthenticated) {
     return (
@@ -3125,6 +3026,7 @@ const STORAGE_PROGRAM_SETTINGS = "zeltyo_program_settings";
     </div>
   );
 }
+
 
 function FakeQr({ value }) {
   const cells = Array.from({ length: 81 }, (_, i) => {

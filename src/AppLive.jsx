@@ -98,11 +98,13 @@ export default function App() {
   });
 
   const [promo, setPromo] = useState({
-    title: "",
-    code: "",
-    description: "",
-    channel: "Instagram",
-  });
+  title: "",
+  code: "",
+  description: "",
+  channel: "Instagram",
+  ctaLabel: "",
+  ctaUrl: "",
+});
 
   const [locationSettings, setLocationSettings] = useState({
     country: "CH",
@@ -184,6 +186,7 @@ export default function App() {
   country: "CH",
   website: "",
   vatNumber: "",
+  reviewUrl: "",
 });
 
   const [employees, setEmployees] = useState([
@@ -559,14 +562,45 @@ export default function App() {
 }
 
   function generateMessage(customer) {
-    const remaining = rewardGoal - (customer.points % rewardGoal || rewardGoal);
+  const remaining =
+    rewardGoal - (customer.points % rewardGoal || rewardGoal);
 
-    if (customer.rewardsAvailable > 0) {
-      return `Bonjour ${customer.name} 👋\n\n🎉 Bonne nouvelle !\n\nVous avez ${customer.rewardsAvailable} récompense(s) disponible(s) :\n👉 ${rewardLabel}\n\nPassez en profiter dès aujourd’hui !`;
-    }
+  // CAS 1 : récompense disponible
+  if (customer.rewardsAvailable > 0) {
+    return `Bonjour ${customer.name} 👋
 
-    return `Bonjour ${customer.name} 👋\n\nVous avez actuellement ${customer.points} point(s).\n\nEncore ${remaining} point(s) avant votre récompense :\n🎁 ${rewardLabel}\n\nÀ très vite chez ${businessName} !`;
+🎉 Bonne nouvelle !
+
+Vous avez ${customer.rewardsAvailable} récompense(s) disponible(s) :
+👉 ${rewardLabel}
+
+Passez en profiter dès aujourd’hui !
+
+${
+  merchantContact.reviewUrl
+    ? `⭐ Vous pouvez aussi laisser un avis ici :
+${merchantContact.reviewUrl}`
+    : ""
+}`;
   }
+
+  // CAS 2 : pas encore de récompense
+  return `Bonjour ${customer.name} 👋
+
+Vous avez actuellement ${customer.points} point(s).
+
+Encore ${remaining} point(s) avant votre récompense :
+🎁 ${rewardLabel}
+
+À très vite chez ${businessName} !
+
+${
+  merchantContact.reviewUrl
+    ? `⭐ Votre avis compte beaucoup :
+${merchantContact.reviewUrl}`
+    : ""
+}`;
+}
 
   function openWhatsApp(customer) {
     const message = generateMessage(customer);
@@ -760,6 +794,7 @@ function handleSaveMerchantContact() {
       website: merchantContact.website.trim(),
       vatNumber: merchantContact.vatNumber.trim(),
       updatedAt: new Date().toISOString(),
+      reviewUrl: merchantContact.reviewUrl.trim(),
     };
 
     localStorage.setItem(STORAGE_MERCHANT_CONTACT, JSON.stringify(payload));
@@ -1516,6 +1551,7 @@ loginLogo: {
 
  function resetBusinessData(newShopName = "Mon Commerce") {
   setBusinessName(newShopName);
+
   setRewardGoal(10);
   setRewardLabel("1 boisson offerte");
   setPrimaryColor("#D4AF37");
@@ -1540,6 +1576,7 @@ loginLogo: {
     country: "CH",
     website: "",
     vatNumber: "",
+    reviewUrl: "",
   });
 
   setCustomers([]);
@@ -1558,6 +1595,8 @@ loginLogo: {
     code: "",
     description: "",
     channel: "Instagram",
+    ctaLabel: "",
+    ctaUrl: "",
   });
 
   setNewEmployee({
@@ -1568,8 +1607,6 @@ loginLogo: {
 
   setScanId("");
   setSearch("");
-
-  localStorage.removeItem(STORAGE_MERCHANT_CONTACT);
 }
 
 function handleCreateNewBusiness() {
@@ -1582,8 +1619,15 @@ function handleCreateNewBusiness() {
   const nextShopName =
     merchantContact.shopName?.trim() || "Nouvelle entreprise";
 
+  localStorage.removeItem(STORAGE_MERCHANT_CONTACT);
+  localStorage.removeItem(STORAGE_AUTH);
+  localStorage.removeItem("zeltyo_promotions");
+  localStorage.removeItem("zeltyo_program_settings");
+
   resetBusinessData(nextShopName);
-  showNotification("Nouvelle entreprise initialisée");
+  setIsAuthenticated(false);
+
+  showNotification("Nouvelle entreprise initialisée. Veuillez vous reconnecter.");
 }
 
 const activePromotionList = promotions.filter((p) => p.status === "Active");
@@ -2339,6 +2383,20 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
       </div>
 
       <input
+  style={styles.input}
+  placeholder="Texte du bouton (ex: Réserver maintenant)"
+  value={promo.ctaLabel}
+  onChange={(e) => setPromo({ ...promo, ctaLabel: e.target.value })}
+/>
+
+<input
+  style={styles.input}
+  placeholder="Lien du bouton (https://...)"
+  value={promo.ctaUrl}
+  onChange={(e) => setPromo({ ...promo, ctaUrl: e.target.value })}
+/>
+
+      <input
         style={styles.input}
         placeholder="Titre de l'offre"
         value={promo.title}
@@ -2442,10 +2500,19 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
               <p style={{ marginBottom: 0, lineHeight: 1.7 }}>
                 {promotion.description}
               </p>
+              {promotion.ctaUrl && (
+  <button
+    style={styles.buttonSecondary}
+    onClick={() => window.open(promotion.ctaUrl, "_blank")}
+  >
+    {promotion.ctaLabel || "Voir l'offre"}
+  </button>
+)}
             </div>
           ))}
         </>
       )}
+
 
       {pausedPromotionList.length > 0 && (
         <>
@@ -2945,6 +3012,14 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
       }, ${merchantContact.country || ""}`
     : "Adresse non renseignée"}
 </p>
+{merchantContact.reviewUrl && (
+  <button
+    style={styles.buttonSecondary}
+    onClick={() => window.open(merchantContact.reviewUrl, "_blank")}
+  >
+    ⭐ Laisser un avis
+  </button>
+)}
                 <p style={{ lineHeight: 1.7 }}>
                   {rewardGoal} points = {rewardLabel}
                 </p>

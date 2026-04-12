@@ -270,6 +270,23 @@ export default function App() {
     });
   }
 
+  function saveProgramSettings(settings) {
+  localStorage.setItem(STORAGE_PROGRAM_SETTINGS, JSON.stringify(settings));
+}
+
+function loadProgramSettings() {
+  const raw = localStorage.getItem(STORAGE_PROGRAM_SETTINGS);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error("Erreur lecture réglages programme:", error);
+    localStorage.removeItem(STORAGE_PROGRAM_SETTINGS);
+    return null;
+  }
+}
+
   async function handleLogin() {
     try {
       const response = await fetch(buildApiUrl("/auth/merchant-login"), {
@@ -754,7 +771,29 @@ useEffect(() => {
           businessId: auth.user.businessId,
         });
 
-        applyBusinessConfig(auth.user.businessId);
+        const savedProgramSettings = loadProgramSettings();
+
+        if (savedProgramSettings) {
+          setBusinessName(savedProgramSettings.businessName || "Mon Commerce");
+          setRewardGoal(savedProgramSettings.rewardGoal || 10);
+          setRewardLabel(
+            savedProgramSettings.rewardLabel || "1 boisson offerte"
+          );
+          setPrimaryColor(savedProgramSettings.primaryColor || "#D4AF37");
+          setLocationSettings(
+            savedProgramSettings.locationSettings || {
+              country: "CH",
+              city: "Genève",
+              zoneLabel: "Genève Centre",
+              latitude: "46.2044",
+              longitude: "6.1432",
+              radiusKm: "1.5",
+            }
+          );
+        } else {
+          applyBusinessConfig(auth.user.businessId);
+        }
+
         setIsAuthenticated(true);
       }
     } catch (error) {
@@ -777,7 +816,41 @@ useEffect(() => {
       console.error("Erreur lecture coordonnées commerçant:", error);
     }
   }
+
+  const rawPromotions = localStorage.getItem("zeltyo_promotions");
+  if (rawPromotions) {
+    try {
+      setPromotions(JSON.parse(rawPromotions));
+    } catch (error) {
+      console.error("Erreur lecture promotions:", error);
+      localStorage.removeItem("zeltyo_promotions");
+    }
+  }
 }, []);
+
+useEffect(() => {
+  if (!isAuthenticated) return;
+
+  saveProgramSettings({
+    businessName,
+    rewardGoal,
+    rewardLabel,
+    primaryColor,
+    locationSettings,
+  });
+}, [
+  isAuthenticated,
+  businessName,
+  rewardGoal,
+  rewardLabel,
+  primaryColor,
+  locationSettings,
+]);
+
+useEffect(() => {
+  if (!isAuthenticated) return;
+  localStorage.setItem("zeltyo_promotions", JSON.stringify(promotions));
+}, [isAuthenticated, promotions]);
 
 function handleSaveMerchantContact() {
   try {
@@ -1633,6 +1706,7 @@ function handleCreateNewBusiness() {
 const activePromotionList = promotions.filter((p) => p.status === "Active");
 const pausedPromotionList = promotions.filter((p) => p.status === "Pause");
 const archivedPromotionList = promotions.filter((p) => p.status === "Archivée");
+const STORAGE_PROGRAM_SETTINGS = "zeltyo_program_settings";
 
   if (!isAuthenticated) {
     return (

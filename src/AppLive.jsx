@@ -267,28 +267,46 @@ function loadProgramSettings() {
     return "Bronze";
   }
 
-  function addCustomer() {
-    if (!newCustomer.name.trim()) return;
+  async function addCustomer() {
+  if (!newCustomer.name.trim()) return;
 
-    const id = `CL-${1000 + customers.length + 1}`;
+  try {
+    const rawAuth = localStorage.getItem(STORAGE_AUTH);
+    const auth = JSON.parse(rawAuth);
+    const token = auth?.token;
+    const businessId = auth?.user?.businessId;
 
-    const customer = {
-      id,
-      name: newCustomer.name,
-      email: newCustomer.email,
-      phone: newCustomer.phone,
-      points: 0,
-      visits: 0,
-      rewardsAvailable: 0,
-      tier: "Bronze",
-      lastVisit: "Nouveau",
-    };
+    const response = await fetch(buildApiUrl("/clients"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        name: newCustomer.name,
+        email: newCustomer.email,
+        phone: newCustomer.phone,
+        businessId,
+      }),
+    });
 
-    setCustomers([customer, ...customers]);
+    const data = await response.json();
+
+    if (!response.ok) {
+      showNotification("Erreur création client");
+      return;
+    }
+
+    setCustomers((prev) => [data, ...prev]);
+
     setNewCustomer({ name: "", email: "", phone: "" });
-    addLog("A ajouté un client", `${customer.name} (${customer.id})`);
-    showNotification(`Client ajouté par ${currentUser.name}`);
+
+    showNotification("Client enregistré (backend OK)");
+  } catch (error) {
+    console.error(error);
+    showNotification("Erreur serveur");
   }
+}
 
   function rewardVisit() {
     const selectedCustomer = customers.find((customer) => customer.id === scanId);
@@ -2803,6 +2821,15 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
   value={merchantContact.website}
   onChange={(e) =>
     setMerchantContact({ ...merchantContact, website: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="Lien Google Avis (https://g.page/.../review)"
+  value={merchantContact.reviewUrl}
+  onChange={(e) =>
+    setMerchantContact({ ...merchantContact, reviewUrl: e.target.value })
   }
 />
 

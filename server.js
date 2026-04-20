@@ -12,7 +12,7 @@ import automationSegmentedRouter, {
 import { sendPush } from "./services/onesignal.js";
 import notificationsAdvanced from "./routes/notificationsAdvanced.js";
 import authRoutes from "./routes/auth.js";
-
+import bookingsRouter from "./routes/bookings.js";
 dotenv.config();
 
 const app = express();
@@ -32,19 +32,34 @@ const allowedOrigins = [
   process.env.MERCHANT_APP_URL,
 ].filter(Boolean);
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    console.log("🌍 Origin:", origin);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  console.log("🌍 Origin:", origin);
 
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin || "*");
+    res.header("Vary", "Origin");
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  }
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
+app.use(cors({
+  origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-
     return callback(new Error(`CORS blocked: ${origin}`));
   },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
-};
+}));
+
 
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
@@ -72,6 +87,7 @@ app.use("/notifications-advanced", notificationsAdvanced);
 app.use("/notifications", notificationsRouter);
 app.use("/automation", automationRoutes);
 app.use("/clients", clientsRouter);
+app.use("/bookings", bookingsRouter);
 app.use("/automation-segmented", automationSegmentedRouter);
 
 app.get("/test-push", async (req, res) => {

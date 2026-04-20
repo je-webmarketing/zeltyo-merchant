@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { buildApiUrl } from "./config/api";
+import { QRCodeSVG } from "qrcode.react";
+import BookingsManager from "./components/BookingsManager";
 
 const STORAGE_AUTH = "zeltyo_merchant_auth";
 const STORAGE_MERCHANT_CONTACT = "zeltyo_merchant_contact";
@@ -271,40 +273,52 @@ function loadProgramSettings() {
   if (!newCustomer.name.trim()) return;
 
   try {
-    const rawAuth = localStorage.getItem(STORAGE_AUTH);
-    const auth = JSON.parse(rawAuth);
-    const token = auth?.token;
-    const businessId = auth?.user?.businessId;
-
     const response = await fetch(buildApiUrl("/clients"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        name: newCustomer.name,
-        email: newCustomer.email,
-        phone: newCustomer.phone,
-        businessId,
+        name: newCustomer.name.trim(),
+        email: newCustomer.email.trim(),
+        phone: newCustomer.phone.trim(),
       }),
     });
 
-    const data = await response.json();
+    const rawText = await response.text();
+    console.log("Réponse brute création client =", rawText);
 
     if (!response.ok) {
-      showNotification("Erreur création client");
+      console.error("Erreur création client :", response.status, rawText);
+      showNotification("Route backend client introuvable");
       return;
     }
 
-    setCustomers((prev) => [data, ...prev]);
+    const data = JSON.parse(rawText);
+    const createdClient = data.client || data;
 
+    const customer = {
+      id: createdClient.id || `CL-${1000 + customers.length + 1}`,
+      loyaltyId:
+        createdClient.loyaltyId || createdClient.id || `CL-${1000 + customers.length + 1}`,
+      name: createdClient.name || newCustomer.name.trim(),
+      email: createdClient.email || newCustomer.email.trim(),
+      phone: createdClient.phone || newCustomer.phone.trim(),
+      points: createdClient.points || 0,
+      visits: createdClient.visits || 0,
+      rewardsAvailable: createdClient.rewardsAvailable || 0,
+      tier: getTier(createdClient.points || 0),
+      lastVisit: "Nouveau",
+    };
+
+    setCustomers((prev) => [customer, ...prev]);
     setNewCustomer({ name: "", email: "", phone: "" });
 
-    showNotification("Client enregistré (backend OK)");
+    addLog("A ajouté un client", `${customer.name} (${customer.id})`);
+    showNotification(`Client ajouté par ${currentUser.name}`);
   } catch (error) {
-    console.error(error);
-    showNotification("Erreur serveur");
+    console.error("Erreur ajout client :", error);
+    showNotification("Erreur de connexion au serveur");
   }
 }
 
@@ -852,16 +866,12 @@ ${merchantContact.reviewUrl}`
       boxShadow: "0 12px 28px rgba(0,0,0,0.32)",
       minHeight: "112px",
     },
- brandLogoWrap: {
-  padding: "14px",
-  borderRadius: "24px",
-  background: "#0B0B0B",
-  border: `1px solid rgba(212,175,55,0.6)`,
-  boxShadow: `
-    0 0 12px rgba(212,175,55,0.25),
-    0 0 30px rgba(212,175,55,0.15),
-    inset 0 0 8px rgba(212,175,55,0.08)
-  `,
+brandLogoWrap: {
+  padding: "10px",
+  borderRadius: "26px",
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -869,11 +879,11 @@ ${merchantContact.reviewUrl}`
 },
 
 brandLogo: {
-  width: "98px",
-  height: "98px",
-  borderRadius: "18px",
-  background: "#000000",
-  padding: "8px",
+  width: "130px",
+  height: "130px",
+  borderRadius: "22px",
+  background: "transparent",
+  padding: "0",
   objectFit: "contain",
   display: "block",
 },
@@ -1434,26 +1444,22 @@ brandText: {
       marginBottom: "22px",
       flexWrap: "wrap",
     },
-    loginLogoWrap: {
-  width: "150px",
-  height: "150px",
+loginLogoWrap: {
+  width: "170px",
+  height: "170px",
   margin: "0 auto 24px auto",
   borderRadius: "30px",
-  background: "#0B0B0B",
-  border: `1px solid ${COLORS.gold}`,
-  boxShadow: `
-    0 0 14px rgba(212,175,55,0.25),
-    0 0 32px rgba(212,175,55,0.18),
-    inset 0 0 10px rgba(212,175,55,0.08)
-  `,
+  background: "transparent",
+  border: "none",
+  boxShadow: "none",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
 },
 
 loginLogo: {
-  width: "108px",
-  height: "108px",
+  width: "145px",
+  height: "145px",
   objectFit: "contain",
   display: "block",
 },
@@ -1966,12 +1972,12 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
               >
                 Valider une visite
               </button>
-              <button
-                style={styles.quickButton}
-                onClick={() => setActiveTab("promos")}
-              >
-                Créer une promotion
-              </button>
+             <button
+  style={styles.quickButton}
+  onClick={() => setActiveTab("promos")}
+>
+  Créer une promotion
+</button>
               <button
                 style={styles.quickButton}
                 onClick={() => setActiveTab("team")}
@@ -2075,6 +2081,10 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
                     setNewCustomer({ ...newCustomer, name: e.target.value })
                   }
                 />
+                <div style={styles.card}>
+  <h3 style={styles.cardTitle}>Demandes de réservation</h3>
+  <BookingsManager selectedBusiness={{ id: "BUS-DYNAMIC" }} />
+</div>
                 <input
                   style={styles.input}
                   placeholder="Email"
@@ -2230,7 +2240,24 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
           </div>
 
           <div style={styles.fakeQrWrap}>
-            <FakeQr value={customer.id} />
+            <QRCodeSVG
+  value={`https://zeltyo-clients.netlify.app/card/${customer.id}`}
+  size={120}
+  bgColor="#FFFFFF"
+  fgColor="#111111"
+  level="H"
+  includeMargin={false}
+/>
+<button
+  style={styles.buttonSecondary}
+  onClick={() => {
+    const cardLink = `https://zeltyo-clients.netlify.app/card/${customer.id}`;
+    navigator.clipboard.writeText(cardLink);
+    showNotification("Lien de carte fidélité copié");
+  }}
+>
+  Copier le lien carte fidélité
+</button>
             <div
               style={{
                 marginTop: "10px",

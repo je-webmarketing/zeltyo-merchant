@@ -4,6 +4,7 @@ import {
   getOneSignalStatus,
   enableOneSignalNotifications,
 } from "./lib/onesignal";
+import { buildApiUrl } from "../config/api";
 
 export default function ClientApp() {
   const [selectedZone, setSelectedZone] = useState("Genève");
@@ -129,7 +130,7 @@ export default function ClientApp() {
 
   const saveClientSubscription = async (subscriptionId) => {
   try {
-    const response = await fetch("https://zeltyo-app.onrender.com/clients/register-subscription", {
+    const response = await fetch(buildApiUrl("/clients/register-subscription"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

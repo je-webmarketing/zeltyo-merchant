@@ -6,6 +6,7 @@ import BookingsManager from "./components/BookingsManager";
 const STORAGE_AUTH = "zeltyo_merchant_auth";
 const STORAGE_MERCHANT_CONTACT = "zeltyo_merchant_contact";
 const STORAGE_PROGRAM_SETTINGS = "zeltyo_program_settings";
+const STORAGE_MENU = "zeltyo_menu";
 
 const COLORS = {
   bg: "#050505",
@@ -134,7 +135,14 @@ const [merchantContact, setMerchantContact] = useState({
 });
 const [employees, setEmployees] = useState([]);
 const [activityLog, setActivityLog] = useState([]);
-  
+const [menuItems, setMenuItems] = useState([]);
+const [newMenuItem, setNewMenuItem] = useState({
+  name: "",
+  description: "",
+  price: "",
+  category: "Snacking",
+  active: true,
+});  
 
   const [newEmployee, setNewEmployee] = useState({
     name: "",
@@ -199,7 +207,7 @@ function loadProgramSettings() {
 
       localStorage.setItem(STORAGE_AUTH, JSON.stringify(data));
 
-      setCurrentUser({
+       setCurrentUser({
         name: data.user.name,
         role: data.user.role === "merchant_admin" ? "admin" : "employee",
         email: data.user.email,
@@ -411,6 +419,91 @@ ctaUrl: promo.ctaUrl,
     addLog("A créé une promotion", `Promotion créée : ${newPromo.title}`);
     showNotification("Promotion publiée avec succès");
   }
+
+ async function addMenuItem() {
+  if (!newMenuItem.name.trim() || !newMenuItem.price) {
+    showNotification("Nom et prix obligatoires pour le menu");
+    return;
+  }
+
+  const item = {
+    id: `MENU-${Date.now()}`,
+    businessId: currentUser?.businessId || "BUS-2",
+    name: newMenuItem.name.trim(),
+    description: newMenuItem.description.trim(),
+    price: Number(newMenuItem.price),
+    category: newMenuItem.category,
+    active: Boolean(newMenuItem.active),
+  };
+
+  try {
+    console.log("POST MENU envoyé =", item);
+
+    const response = await fetch(buildApiUrl("/menu"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(item),
+    });
+
+    const text = await response.text();
+    console.log("Réponse menu brute =", text);
+
+    let data = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Réponse backend non JSON");
+    }
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || "Erreur backend menu");
+    }
+
+    const savedItem = data.item || item;
+
+    setMenuItems((prev) => [savedItem, ...prev]);
+
+    setNewMenuItem({
+      name: "",
+      description: "",
+      price: "",
+      category: "Snacking",
+      active: true,
+    });
+
+    addLog(
+      "A ajouté un produit au menu",
+      `${savedItem.name} (${Number(savedItem.price).toFixed(2)} €)`
+    );
+
+    showNotification("Produit ajouté au menu");
+  } catch (error) {
+    console.error("Erreur ajout menu backend :", error);
+    showNotification("Erreur ajout menu backend");
+  }
+}
+
+function toggleMenuItem(menuId) {
+  setMenuItems((prev) =>
+    prev.map((item) =>
+      item.id === menuId
+        ? { ...item, active: !item.active }
+        : item
+    )
+  );
+
+  const found = menuItems.find((item) => item.id === menuId);
+  if (found) {
+    addLog(
+      "A modifié un produit du menu",
+      `${found.name} → ${found.active ? "Inactif" : "Actif"}`
+    );
+  }
+
+  showNotification("Menu mis à jour");
+}
 
   function addEmployee() {
     if (currentUser.role !== "admin") {
@@ -748,6 +841,16 @@ setPrimaryColor("");
       localStorage.removeItem("zeltyo_promotions");
     }
   }
+
+   const rawMenu = localStorage.getItem(STORAGE_MENU);
+  if (rawMenu) {
+    try {
+      setMenuItems(JSON.parse(rawMenu));
+    } catch (error) {
+      console.error("Erreur lecture menu :", error);
+      localStorage.removeItem(STORAGE_MENU);
+    }
+  }
 }, []);
 
 useEffect(() => {
@@ -770,12 +873,11 @@ useEffect(() => {
   locationSettings,
 ]);
 
+
 useEffect(() => {
   if (!isAuthenticated) return;
-  localStorage.setItem("zeltyo_promotions", JSON.stringify(promotions));
-}, [isAuthenticated, promotions]);
-
-
+  localStorage.setItem("zeltyo_menu", JSON.stringify(menuItems));
+}, [isAuthenticated, menuItems]);
 
 function handleSaveMerchantContact() {
   try {
@@ -2071,69 +2173,72 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
             </div>
 
             <div style={styles.grid2}>
-              <div style={styles.card}>
-                <h3 style={styles.cardTitle}>Ajouter un client</h3>
-                <input
-                  style={styles.input}
-                  placeholder="Nom du client"
-                  value={newCustomer.name}
-                  onChange={(e) =>
-                    setNewCustomer({ ...newCustomer, name: e.target.value })
-                  }
-                />
-                <div style={styles.card}>
-  <h3 style={styles.cardTitle}>Demandes de réservation</h3>
-  <BookingsManager selectedBusiness={{ id: "BUS-DYNAMIC" }} />
-</div>
-                <input
-                  style={styles.input}
-                  placeholder="Email"
-                  value={newCustomer.email}
-                  onChange={(e) =>
-                    setNewCustomer({ ...newCustomer, email: e.target.value })
-                  }
-                />
-                <input
-                  style={styles.input}
-                  placeholder="Téléphone"
-                  value={newCustomer.phone}
-                  onChange={(e) =>
-                    setNewCustomer({ ...newCustomer, phone: e.target.value })
-                  }
-                />
-                <button style={styles.buttonFull} onClick={addCustomer}>
-                  Créer une carte fidélité
-                </button>
-                <p style={styles.helper}>
-                  Cette action reste disponible pour l’équipe. L’administrateur
-                  peut ensuite vérifier qui a ajouté chaque client dans l’onglet
-                  de contrôle.
-                </p>
-              </div>
+  <div style={styles.card}>
+    <h3 style={styles.cardTitle}>Ajouter un client</h3>
+    <input
+      style={styles.input}
+      placeholder="Nom du client"
+      value={newCustomer.name}
+      onChange={(e) =>
+        setNewCustomer({ ...newCustomer, name: e.target.value })
+      }
+    />
+    <input
+      style={styles.input}
+      placeholder="Email"
+      value={newCustomer.email}
+      onChange={(e) =>
+        setNewCustomer({ ...newCustomer, email: e.target.value })
+      }
+    />
+    <input
+      style={styles.input}
+      placeholder="Téléphone"
+      value={newCustomer.phone}
+      onChange={(e) =>
+        setNewCustomer({ ...newCustomer, phone: e.target.value })
+      }
+    />
+    <button style={styles.buttonFull} onClick={addCustomer}>
+      Créer une carte fidélité
+    </button>
+    <p style={styles.helper}>
+      Cette action reste disponible pour l’équipe. L’administrateur
+      peut ensuite vérifier qui a ajouté chaque client dans l’onglet
+      de contrôle.
+    </p>
+  </div>
 
-              <div style={styles.card}>
-                <h3 style={styles.cardTitle}>Valider une visite</h3>
-                <select
-                  style={styles.input}
-                  value={scanId}
-                  onChange={(e) => setScanId(e.target.value)}
-                >
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} — {customer.id}
-                    </option>
-                  ))}
-                </select>
-                <button style={styles.buttonFull} onClick={rewardVisit}>
-                  Ajouter 1 point après validation
-                </button>
-                <p style={styles.helper}>
-                  L’employé peut gérer la fidélité en caisse. Chaque validation
-                  continue de remonter automatiquement dans le journal
-                  d’activité.
-                </p>
-              </div>
-            </div>
+  <div style={styles.card}>
+    <h3 style={styles.cardTitle}>Valider une visite</h3>
+    <select
+      style={styles.input}
+      value={scanId}
+      onChange={(e) => setScanId(e.target.value)}
+    >
+      {customers.map((customer) => (
+        <option key={customer.id} value={customer.id}>
+          {customer.name} — {customer.id}
+        </option>
+      ))}
+    </select>
+    <button style={styles.buttonFull} onClick={rewardVisit}>
+      Ajouter 1 point après validation
+    </button>
+    <p style={styles.helper}>
+      L’employé peut gérer la fidélité en caisse. Chaque validation
+      continue de remonter automatiquement dans le journal
+      d’activité.
+    </p>
+  </div>
+</div>
+
+<div style={{ marginBottom: "20px" }}>
+  <div style={styles.card}>
+    <h3 style={styles.cardTitle}>Demandes de réservation</h3>
+    <BookingsManager selectedBusiness={{ id: currentUser?.businessId || "BUS-DYNAMIC" }} />
+  </div>
+</div>
 
             <div style={styles.grid3}>
               <div style={styles.card}>
@@ -2882,6 +2987,89 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
   documents, les réglages avancés et les écrans publics de l’application.
 </p>
 
+<h3 style={styles.cardTitle}>Carte menu emporter</h3>
+
+<input
+  style={styles.input}
+  placeholder="Nom du produit"
+  value={newMenuItem.name}
+  onChange={(e) =>
+    setNewMenuItem({ ...newMenuItem, name: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  placeholder="Description courte"
+  value={newMenuItem.description}
+  onChange={(e) =>
+    setNewMenuItem({ ...newMenuItem, description: e.target.value })
+  }
+/>
+
+<input
+  style={styles.input}
+  type="number"
+  step="0.01"
+  placeholder="Prix"
+  value={newMenuItem.price}
+  onChange={(e) =>
+    setNewMenuItem({ ...newMenuItem, price: e.target.value })
+  }
+/>
+
+<select
+  style={styles.input}
+  value={newMenuItem.category}
+  onChange={(e) =>
+    setNewMenuItem({ ...newMenuItem, category: e.target.value })
+  }
+>
+  <option value="Snacking">Snacking</option>
+  <option value="Boissons">Boissons</option>
+  <option value="Desserts">Desserts</option>
+  <option value="Plats">Plats</option>
+  <option value="Formules">Formules</option>
+</select>
+
+<button style={styles.buttonFull} onClick={addMenuItem}>
+  Ajouter au menu
+</button>
+
+<div style={{ marginTop: "18px", display: "grid", gap: "12px" }}>
+  {menuItems.length === 0 ? (
+    <p style={styles.muted}>Aucun produit dans la carte menu pour le moment.</p>
+  ) : (
+    menuItems.map((item) => (
+      <div key={item.id} style={styles.promoCard}>
+        <div style={styles.rowBetween}>
+          <div>
+            <div style={{ fontWeight: 900 }}>{item.name}</div>
+            <div style={styles.muted}>
+              {item.category} • {Number(item.price).toFixed(2)} €
+            </div>
+          </div>
+
+          <span style={item.active ? styles.badgeGreen : styles.badgeOrange}>
+            {item.active ? "Actif" : "Inactif"}
+          </span>
+        </div>
+
+        {item.description ? (
+          <div style={styles.kpiLine}>{item.description}</div>
+        ) : null}
+
+        <button
+          style={{ ...styles.buttonGhost, marginTop: "10px" }}
+          onClick={() => toggleMenuItem(item.id)}
+        >
+          {item.active ? "Désactiver" : "Réactiver"}
+        </button>
+      </div>
+    ))
+  )}
+</div>
+
 <div
   style={{
     height: "1px",
@@ -3079,8 +3267,6 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
       </div>
     </div>
   );
-}
-
 
 function FakeQr({ value }) {
   const cells = Array.from({ length: 81 }, (_, i) => {
@@ -3149,4 +3335,5 @@ function StatCard({ label, value }) {
       </div>
     </div>
   );
+}
 }

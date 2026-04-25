@@ -3,6 +3,11 @@ const API_BASE_URL =
 
 function buildApiUrl(path) {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
+
+  if (import.meta.env.DEV) {
+    return `/api${cleanPath}`;
+  }
+
   return `${API_BASE_URL}${cleanPath}`;
 }
 

@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { buildApiUrl } from "./config/api";
 import { QRCodeSVG } from "qrcode.react";
 import BookingsManager from "./components/BookingsManager";
+import MenuUploader from "./components/MenuUploader";
 
 const STORAGE_AUTH = "zeltyo_merchant_auth";
 const STORAGE_MERCHANT_CONTACT = "zeltyo_merchant_contact";
@@ -149,6 +150,15 @@ const [newMenuItem, setNewMenuItem] = useState({
     email: "",
     role: "employee",
   });
+
+ const [menuImage, setMenuImage] = useState(
+  localStorage.getItem("merchant_menu_image") || ""
+);
+
+function handleMenuUpload(base64) {
+  setMenuImage(base64);
+  localStorage.setItem("merchant_menu_image", base64);
+}
 
  function applyBusinessConfig(businessId) {
   const config = BUSINESS_CONFIG[businessId];
@@ -2988,6 +2998,37 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
 </p>
 
 <h3 style={styles.cardTitle}>Carte menu emporter</h3>
+
+<MenuUploader onUpload={handleMenuUpload} />
+
+{menuImage && (
+  <div style={{ marginTop: "18px", marginBottom: "18px" }}>
+    <img
+      src={menuImage}
+      alt="Carte menu"
+      style={{
+        width: "100%",
+        borderRadius: "16px",
+        border: `1px solid ${COLORS.border}`,
+        boxShadow: "0 12px 28px rgba(0,0,0,0.35)",
+      }}
+    />
+
+    <button
+      style={{
+        ...styles.buttonDanger,
+        marginTop: "12px",
+      }}
+      onClick={() => {
+        setMenuImage("");
+        localStorage.removeItem("merchant_menu_image");
+        showNotification("Image du menu supprimée");
+      }}
+    >
+      Supprimer l’image du menu
+    </button>
+  </div>
+)}
 
 <input
   style={styles.input}

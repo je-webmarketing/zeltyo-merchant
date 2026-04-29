@@ -13,6 +13,8 @@ import { sendPush } from "./services/onesignal.js";
 import notificationsAdvanced from "./routes/notificationsAdvanced.js";
 import authRoutes from "./routes/auth.js";
 import bookingsRouter from "./routes/bookings.js";
+import businessRoutes from "./routes/business.js";
+
 dotenv.config();
 
 const app = express();
@@ -61,6 +63,7 @@ app.use(cors({
 }));
 
 
+app.use("/business", businessRoutes);
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 

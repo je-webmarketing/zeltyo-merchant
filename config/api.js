@@ -1,10 +1,8 @@
-const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL || "https://zeltyo-app.onrender.com")
-    .replace(/\/+$/, "");
+const API_BASE = "https://zeltyo-backend.onrender.com";
 
-function buildApiUrl(path) {
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE_URL}${cleanPath}`;
+export function buildApiUrl(path) {
+  if (!path.startsWith("/")) {
+    path = "/" + path;
+  }
+  return API_BASE + path;
 }
-
-export { API_BASE_URL, buildApiUrl };

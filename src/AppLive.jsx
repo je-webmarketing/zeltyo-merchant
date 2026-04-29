@@ -3,6 +3,11 @@ import { buildApiUrl } from "./config/api";
 import { QRCodeSVG } from "qrcode.react";
 import BookingsManager from "./components/BookingsManager";
 import MenuUploader from "./components/MenuUploader";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import JournalModule from "./modules/journal/JournalModule";
+import ClientsModule from "./modules/clients/ClientsModule";
+import TeamModule from "./modules/team/TeamModule";
+import PromosModule from "./modules/promos/PromosModule";
 
 const STORAGE_AUTH = "zeltyo_merchant_auth";
 const STORAGE_MERCHANT_CONTACT = "zeltyo_merchant_contact";
@@ -67,16 +72,45 @@ const TABS = [
   { key: "promos", label: "Promotions", icon: "✦" },
   { key: "team", label: "Équipe & contrôle", icon: "▣" },
   { key: "settings", label: "Paramètres", icon: "⚙" },
+  { key: "onboarding", label: "Démarrage", icon: "🚀" },
 ];
 
 export default function App() {
+  if (window.location.pathname === "/reset-password") {
+  return <ResetPasswordPage />;
+}
   const poweredByLabel = "Zeltyo by JE-Webmarketing";
   const poweredByUrl = "https://ericjarry34.systeme.io/je-webmarketing";
 
-  const [businessName, setBusinessName] = useState("");
-const [rewardGoal, setRewardGoal] = useState("");
-const [rewardLabel, setRewardLabel] = useState("");
-const [primaryColor, setPrimaryColor] = useState("");
+const savedProgramSettings = (() => {
+  const saved = localStorage.getItem(STORAGE_PROGRAM_SETTINGS);
+
+  if (!saved) return null;
+
+  try {
+    return JSON.parse(saved);
+  } catch {
+    localStorage.removeItem(STORAGE_PROGRAM_SETTINGS);
+    return null;
+  }
+})();
+
+const [businessName, setBusinessName] = useState(
+  savedProgramSettings?.businessName || ""
+);
+
+const [rewardGoal, setRewardGoal] = useState(
+  savedProgramSettings?.rewardGoal || ""
+);
+
+const [rewardLabel, setRewardLabel] = useState(
+  savedProgramSettings?.rewardLabel || ""
+);
+
+const [primaryColor, setPrimaryColor] = useState(
+  savedProgramSettings?.primaryColor || ""
+);
+
   const [search, setSearch] = useState("");
   const [scanId, setScanId] = useState("CL-1001");
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -110,33 +144,143 @@ const [primaryColor, setPrimaryColor] = useState("");
   ctaUrl: "",
 });
 
-  const [locationSettings, setLocationSettings] = useState({
-  country: "",
-  city: "",
-  zoneLabel: "",
-  latitude: "",
-  longitude: "",
-  radiusKm: "",
+  const [locationSettings, setLocationSettings] = useState(
+  savedProgramSettings?.locationSettings || {
+    country: "",
+    city: "",
+    zoneLabel: "",
+    latitude: "",
+    longitude: "",
+    radiusKm: "",
+  }
+);
+
+const [customers, setCustomers] = useState(() => {
+  const saved = localStorage.getItem("zeltyo_customers");
+
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    localStorage.removeItem("zeltyo_customers");
+    return [];
+  }
 });
 
- const [customers, setCustomers] = useState([]);
-const [promotions, setPromotions] = useState([]);
-const [merchantContact, setMerchantContact] = useState({
-  shopName: "",
-  ownerName: "",
-  phone: "",
-  email: "",
-  address: "",
-  postalCode: "",
-  city: "",
-  country: "",
-  website: "",
-  vatNumber: "",
-  reviewUrl: "",
+useEffect(() => {
+  if (customers.length > 0 && !customers.some((c) => c.id === scanId)) {
+    setScanId(customers[0].id);
+  }
+}, [customers, scanId]);
+
+useEffect(() => {
+  localStorage.setItem("zeltyo_customers", JSON.stringify(customers));
+}, [customers]);
+
+const [promotions, setPromotions] = useState(() => {
+  const saved = localStorage.getItem("zeltyo_promotions");
+
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    localStorage.removeItem("zeltyo_promotions");
+    return [];
+  }
 });
-const [employees, setEmployees] = useState([]);
-const [activityLog, setActivityLog] = useState([]);
-const [menuItems, setMenuItems] = useState([]);
+
+useEffect(() => {
+  localStorage.setItem("zeltyo_promotions", JSON.stringify(promotions));
+}, [promotions]);
+
+const [merchantContact, setMerchantContact] = useState(() => {
+  const fallback = {
+    shopName: "",
+    ownerName: "",
+    phone: "",
+    email: "",
+    address: "",
+    postalCode: "",
+    city: "",
+    country: "",
+    website: "",
+    vatNumber: "",
+    reviewUrl: "",
+  };
+
+  const saved = localStorage.getItem(STORAGE_MERCHANT_CONTACT);
+
+  if (!saved) return fallback;
+
+  try {
+    return {
+      ...fallback,
+      ...JSON.parse(saved),
+    };
+  } catch {
+    localStorage.removeItem(STORAGE_MERCHANT_CONTACT);
+    return fallback;
+  }
+});
+
+const [employees, setEmployees] = useState(() => {
+  const saved = localStorage.getItem("zeltyo_employees");
+
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    localStorage.removeItem("zeltyo_employees");
+    return [];
+  }
+});
+
+useEffect(() => {
+  localStorage.setItem("zeltyo_employees", JSON.stringify(employees));
+}, [employees]);
+
+const [activityLog, setActivityLog] = useState(() => {
+  const saved = localStorage.getItem("zeltyo_activity_log");
+
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    localStorage.removeItem("zeltyo_activity_log");
+    return [];
+  }
+});
+
+useEffect(() => {
+  localStorage.setItem("zeltyo_activity_log", JSON.stringify(activityLog));
+}, [activityLog]);
+
+const [menuItems, setMenuItems] = useState(() => {
+  const saved = localStorage.getItem("zeltyo_menu");
+
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    localStorage.removeItem("zeltyo_menu");
+    return [];
+  }
+});
+
+useEffect(() => {
+  localStorage.setItem("zeltyo_menu", JSON.stringify(menuItems));
+}, [menuItems]);
+
 const [newMenuItem, setNewMenuItem] = useState({
   name: "",
   description: "",
@@ -145,15 +289,74 @@ const [newMenuItem, setNewMenuItem] = useState({
   active: true,
 });  
 
-  const [newEmployee, setNewEmployee] = useState({
-    name: "",
-    email: "",
-    role: "employee",
-  });
+ const [newEmployee, setNewEmployee] = useState({
+  name: "",
+  email: "",
+  role: "employee",
+  hourlyCost: "",
+});
 
  const [menuImage, setMenuImage] = useState(
   localStorage.getItem("merchant_menu_image") || ""
 );
+
+const [shifts, setShifts] = useState(() => {
+  const saved = localStorage.getItem("zeltyo_shifts");
+
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    localStorage.removeItem("zeltyo_shifts");
+    return [];
+  }
+});
+
+function saveShifts(nextShifts) {
+  setShifts(nextShifts);
+  localStorage.setItem("zeltyo_shifts", JSON.stringify(nextShifts));
+}
+
+function startShift(employeeId) {
+  if (isWorking(employeeId)) {
+    showNotification("Cet employé est déjà en service");
+    return;
+  }
+
+  const newShift = {
+    id: `SHIFT-${Date.now()}`,
+    employeeId,
+    start: new Date().toISOString(),
+    end: null,
+  };
+
+  saveShifts([...shifts, newShift]);
+  showNotification("Prise de service enregistrée");
+}
+
+function endShift(employeeId) {
+  const updated = shifts.map((shift) => {
+    if (shift.employeeId === employeeId && !shift.end) {
+      return { ...shift, end: new Date().toISOString() };
+    }
+
+    return shift;
+  });
+
+  saveShifts(updated);
+  showNotification("Fin de service enregistrée");
+}
+
+function isWorking(employeeId) {
+  return shifts.some((shift) => shift.employeeId === employeeId && !shift.end);
+}
+
+function getTodayShifts() {
+  const today = new Date().toISOString().slice(0, 10);
+  return shifts.filter((shift) => shift.start.startsWith(today));
+}
 
 function handleMenuUpload(base64) {
   setMenuImage(base64);
@@ -252,29 +455,31 @@ function loadProgramSettings() {
   }
 
   function addLog(action, detail) {
-    setActivityLog((prev) => [
-      {
-        id: Date.now(),
-        actor: currentUser.name,
-        role: currentUser.role,
-        action,
-        detail,
-        date: getNowLabel(),
-      },
-      ...prev,
-    ]);
+  const logItem = {
+    id: Date.now(),
+    actor: currentUser.name,
+    role: currentUser.role,
+    action,
+    detail,
+    date: getNowLabel(),
+  };
 
-    setEmployees((prev) =>
-      prev.map((employee) =>
-        employee.name === currentUser.name
-          ? {
-              ...employee,
-              lastAction: detail,
-            }
-          : employee
-      )
-    );
-  }
+ setActivityLog((prev) => {
+  const safePrev = Array.isArray(prev) ? prev : [];
+  return [logItem, ...safePrev].slice(0, 50);
+});
+
+  setEmployees((prev) =>
+    prev.map((employee) =>
+      employee.name === currentUser.name
+        ? {
+            ...employee,
+            lastAction: detail,
+          }
+        : employee
+    )
+  );
+}
 
   function showNotification(message) {
     setNotification(message);
@@ -287,94 +492,82 @@ function loadProgramSettings() {
     return "Bronze";
   }
 
-  async function addCustomer() {
-  if (!newCustomer.name.trim()) return;
+ function addCustomer() {
+  if (!newCustomer.name.trim()) {
+    showNotification("Nom du client obligatoire");
+    return;
+  }
+
+  const id = `CL-${Date.now()}`;
+
+  const customer = {
+    id,
+    loyaltyId: id,
+    name: newCustomer.name.trim(),
+    email: newCustomer.email.trim(),
+    phone: newCustomer.phone.trim(),
+    points: 0,
+    visits: 0,
+    rewardsAvailable: 0,
+    tier: getTier(0),
+    lastVisit: "Nouveau",
+  };
+
+ setCustomers((prev) => {
+  const safePrev = Array.isArray(prev) ? prev : [];
+  return [customer, ...safePrev];
+});
+
+  setNewCustomer({
+    name: "",
+    email: "",
+    phone: "",
+  });
+
+  addLog("A ajouté un client", `${customer.name} (${customer.id})`);
+  showNotification(`Client ajouté par ${currentUser.name}`);
+}
+  async function rewardVisit() {
+  if (!scanId) {
+    showNotification("Sélectionne un client");
+    return;
+  }
 
   try {
-    const response = await fetch(buildApiUrl("/clients"), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: newCustomer.name.trim(),
-        email: newCustomer.email.trim(),
-        phone: newCustomer.phone.trim(),
-      }),
-    });
+   const response = await fetch("https://zeltyo-backend.onrender.com/clients/visit", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    id: scanId,
+    points: 1,
+  }),
+});
 
-    const rawText = await response.text();
-    console.log("Réponse brute création client =", rawText);
+    const data = await response.json();
 
-    if (!response.ok) {
-      console.error("Erreur création client :", response.status, rawText);
-      showNotification("Route backend client introuvable");
+    if (!response.ok || !data.ok) {
+      showNotification(data.error || "Erreur validation visite");
       return;
     }
 
-    const data = JSON.parse(rawText);
-    const createdClient = data.client || data;
-
-    const customer = {
-      id: createdClient.id || `CL-${1000 + customers.length + 1}`,
-      loyaltyId:
-        createdClient.loyaltyId || createdClient.id || `CL-${1000 + customers.length + 1}`,
-      name: createdClient.name || newCustomer.name.trim(),
-      email: createdClient.email || newCustomer.email.trim(),
-      phone: createdClient.phone || newCustomer.phone.trim(),
-      points: createdClient.points || 0,
-      visits: createdClient.visits || 0,
-      rewardsAvailable: createdClient.rewardsAvailable || 0,
-      tier: getTier(createdClient.points || 0),
-      lastVisit: "Nouveau",
-    };
-
-    setCustomers((prev) => [customer, ...prev]);
-    setNewCustomer({ name: "", email: "", phone: "" });
-
-    addLog("A ajouté un client", `${customer.name} (${customer.id})`);
-    showNotification(`Client ajouté par ${currentUser.name}`);
-  } catch (error) {
-    console.error("Erreur ajout client :", error);
-    showNotification("Erreur de connexion au serveur");
-  }
-}
-
-  function rewardVisit() {
-    const selectedCustomer = customers.find((customer) => customer.id === scanId);
-    if (!selectedCustomer) return;
-
-    setCustomers((prev) =>
-      prev.map((customer) => {
-        if (customer.id !== scanId) return customer;
-
-        const nextPoints = customer.points + 1;
-        const rewardReached = nextPoints % Number(rewardGoal || 1) === 0;
-
-        return {
-          ...customer,
-          points: nextPoints,
-          visits: customer.visits + 1,
-          rewardsAvailable: rewardReached
-            ? customer.rewardsAvailable + 1
-            : customer.rewardsAvailable,
-          tier: getTier(nextPoints),
-          lastVisit: "Aujourd'hui",
-        };
-      })
-    );
+    if (Array.isArray(data.clients)) {
+      setCustomers(data.clients);
+      localStorage.setItem("zeltyo_customers", JSON.stringify(data.clients));
+    }
 
     addLog(
       "A validé une visite",
-      `${selectedCustomer.name} (${selectedCustomer.id})`
+      `${data.client?.name || "Client"} (${scanId})`
     );
 
-    if ((selectedCustomer.points + 1) % Number(rewardGoal || 1) === 0) {
-      showNotification(`🎉 Récompense débloquée pour ${selectedCustomer.name}`);
-    } else {
-      showNotification(`+1 point ajouté pour ${selectedCustomer.name}`);
-    }
+    showNotification(`+1 point ajouté pour ${data.client?.name || "le client"}`);
+  } catch (error) {
+    console.error("Erreur validation visite :", error);
+    showNotification("Erreur connexion backend");
   }
+}
 
   function useReward(customerId) {
     const customerFound = customers.find((c) => c.id === customerId);
@@ -430,7 +623,7 @@ ctaUrl: promo.ctaUrl,
     showNotification("Promotion publiée avec succès");
   }
 
- async function addMenuItem() {
+ function addMenuItem() {
   if (!newMenuItem.name.trim() || !newMenuItem.price) {
     showNotification("Nom et prix obligatoires pour le menu");
     return;
@@ -438,7 +631,7 @@ ctaUrl: promo.ctaUrl,
 
   const item = {
     id: `MENU-${Date.now()}`,
-    businessId: currentUser?.businessId || "BUS-2",
+    businessId: currentUser?.businessId || "BUS-LOCAL",
     name: newMenuItem.name.trim(),
     description: newMenuItem.description.trim(),
     price: Number(newMenuItem.price),
@@ -446,53 +639,26 @@ ctaUrl: promo.ctaUrl,
     active: Boolean(newMenuItem.active),
   };
 
-  try {
-    console.log("POST MENU envoyé =", item);
+  setMenuItems((prev) => {
+  const safePrev = Array.isArray(prev) ? prev : [];
+  return [item, ...safePrev];
+});
 
-    const response = await fetch(buildApiUrl("/menu"), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(item),
-    });
+  setNewMenuItem({
+    name: "",
+    description: "",
+    price: "",
+    category: "Snacking",
+    active: true,
+  });
 
-    const text = await response.text();
-    console.log("Réponse menu brute =", text);
+  addLog(
+    "A ajouté un produit au menu",
+    `${item.name} (${item.price.toFixed(2)} €)`
+  );
 
-    let data = {};
-    try {
-      data = JSON.parse(text);
-    } catch {
-      throw new Error("Réponse backend non JSON");
-    }
+  showNotification("Produit ajouté au menu");
 
-    if (!response.ok || !data.ok) {
-      throw new Error(data.error || "Erreur backend menu");
-    }
-
-    const savedItem = data.item || item;
-
-    setMenuItems((prev) => [savedItem, ...prev]);
-
-    setNewMenuItem({
-      name: "",
-      description: "",
-      price: "",
-      category: "Snacking",
-      active: true,
-    });
-
-    addLog(
-      "A ajouté un produit au menu",
-      `${savedItem.name} (${Number(savedItem.price).toFixed(2)} €)`
-    );
-
-    showNotification("Produit ajouté au menu");
-  } catch (error) {
-    console.error("Erreur ajout menu backend :", error);
-    showNotification("Erreur ajout menu backend");
-  }
 }
 
 function toggleMenuItem(menuId) {
@@ -515,6 +681,35 @@ function toggleMenuItem(menuId) {
   showNotification("Menu mis à jour");
 }
 
+function archiveMenuItem(menuId) {
+  const confirmed = window.confirm(
+    "Archiver ce produit ? Il pourra être restauré."
+  );
+
+  if (!confirmed) return;
+
+  const found = menuItems.find((item) => item.id === menuId);
+
+  setMenuItems((prev) =>
+    prev.map((item) =>
+      item.id === menuId
+        ? {
+            ...item,
+            archived: true,
+            archivedAt: new Date().toISOString(),
+            archivedBy: currentUser.email,
+          }
+        : item
+    )
+  );
+
+  if (found) {
+    addLog("A archivé un produit", found.name);
+  }
+
+  showNotification("Produit archivé");
+}
+
   function addEmployee() {
     if (currentUser.role !== "admin") {
       showNotification(
@@ -529,14 +724,16 @@ function toggleMenuItem(menuId) {
     }
 
     const employee = {
-      id: `EMP-${employees.length + 1}`,
-      name: newEmployee.name.trim(),
-      email: newEmployee.email.trim(),
-      password: newEmployee.role === "admin" ? "admin123" : "employe123",
-      role: newEmployee.role,
-      status: "Actif",
-      lastAction: "Compte créé",
-    };
+  id: `EMP-${Date.now()}`,
+  businessId: currentUser.businessId,
+  name: newEmployee.name.trim(),
+  email: newEmployee.email.trim(),
+  password: newEmployee.role === "admin" ? "admin123" : "employe123",
+  role: newEmployee.role,
+  status: "Actif",
+  lastAction: "Compte créé",
+  hourlyCost: Number(newEmployee.hourlyCost || 0),
+};
 
     setEmployees((prev) => [...prev, employee]);
     addLog(
@@ -545,10 +742,16 @@ function toggleMenuItem(menuId) {
         employee.role === "admin" ? "Administrateur" : "Employé"
       }`
     );
-    setNewEmployee({ name: "", email: "", role: "employee" });
+    setNewEmployee({
+  name: "",
+  email: "",
+  role: "employee",
+  hourlyCost: "",
+});
     showNotification("Membre ajouté avec succès");
   }
 
+ 
   function togglePromotionStatus(promoId) {
     if (currentUser.role !== "admin") {
       showNotification("Seul l’administrateur peut modifier une promotion");
@@ -690,14 +893,22 @@ ${merchantContact.reviewUrl}`
   });
 
   const inactiveClients = customers.filter((c) => {
-    if (c.lastVisit === "Aujourd'hui" || c.lastVisit === "Nouveau") return false;
+  const lastVisit = c.lastVisit || c.lastVisitAt || c.updatedAt || c.createdAt;
 
-    const last = new Date(c.lastVisit.split("/").reverse().join("-"));
-    const now = new Date();
-    const diffDays = Math.floor((now - last) / (1000 * 60 * 60 * 24));
+  if (!lastVisit) return false;
+  if (lastVisit === "Aujourd'hui" || lastVisit === "Nouveau") return false;
 
-    return diffDays >= 7;
-  });
+  const lastDate = lastVisit.includes("/")
+    ? new Date(lastVisit.split("/").reverse().join("-"))
+    : new Date(lastVisit);
+
+  if (Number.isNaN(lastDate.getTime())) return false;
+
+  const now = new Date();
+  const diffDays = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+
+  return diffDays >= 7;
+});
 
   const sendSmart = async (type) => {
     try {
@@ -788,79 +999,45 @@ useEffect(() => {
     try {
       const auth = JSON.parse(raw);
 
-      if (auth?.token && auth?.user) {
-        setCurrentUser({
-          name: auth.user.name,
-          role: auth.user.role === "merchant_admin" ? "admin" : "employee",
-          email: auth.user.email,
-          businessId: auth.user.businessId,
-        });
-
-        const savedProgramSettings = loadProgramSettings();
-
-        if (savedProgramSettings) {
-          setBusinessName("");
-setRewardGoal("");
-setRewardLabel("");
-setPrimaryColor("");
-         if (savedProgramSettings?.businessId === auth.user.businessId) {
-  setLocationSettings(savedProgramSettings.locationSettings);
-} else {
-  setLocationSettings({
-    country: "",
-    city: "",
-    zoneLabel: "",
-    latitude: "",
-    longitude: "",
-    radiusKm: "",
-  });
-}
-        } else {
-          // applyBusinessConfig(auth.user.businessId);
-        }
-
-        setIsAuthenticated(true);
+      if (!auth?.token || !auth?.user) {
+        localStorage.removeItem(STORAGE_AUTH);
+        return;
       }
+
+      setCurrentUser({
+        id: auth.user.id,
+        name: auth.user.name,
+        role: auth.user.role === "merchant_admin" ? "admin" : "employee",
+        email: auth.user.email,
+        businessId: auth.user.businessId,
+      });
+
+      if (!auth.user.businessId) {
+        setActiveTab("onboarding");
+      }
+
+      const savedProgramSettings = loadProgramSettings();
+
+      if (savedProgramSettings?.businessId === auth.user.businessId) {
+        setLocationSettings(savedProgramSettings.locationSettings);
+      } else {
+        setLocationSettings({
+          country: "",
+          city: "",
+          zoneLabel: "",
+          latitude: "",
+          longitude: "",
+          radiusKm: "",
+        });
+      }
+
+      setIsAuthenticated(true);
     } catch (error) {
       console.error("Erreur lecture session:", error);
       localStorage.removeItem(STORAGE_AUTH);
     }
   }
-
-  const rawMerchantContact = localStorage.getItem(STORAGE_MERCHANT_CONTACT);
-
-  if (rawMerchantContact) {
-    try {
-      const parsedMerchantContact = JSON.parse(rawMerchantContact);
-      setMerchantContact(parsedMerchantContact);
-
-      if (parsedMerchantContact.shopName) {
-        setBusinessName(parsedMerchantContact.shopName);
-      }
-    } catch (error) {
-      console.error("Erreur lecture coordonnées commerçant:", error);
-    }
-  }
-
-  const rawPromotions = localStorage.getItem("zeltyo_promotions");
-  if (rawPromotions) {
-    try {
-      setPromotions(JSON.parse(rawPromotions));
-    } catch (error) {
-      console.error("Erreur lecture promotions:", error);
-      localStorage.removeItem("zeltyo_promotions");
-    }
-  }
-
-   const rawMenu = localStorage.getItem(STORAGE_MENU);
-  if (rawMenu) {
-    try {
-      setMenuItems(JSON.parse(rawMenu));
-    } catch (error) {
-      console.error("Erreur lecture menu :", error);
-      localStorage.removeItem(STORAGE_MENU);
-    }
-  }
+     
 }, []);
 
 useEffect(() => {
@@ -888,6 +1065,23 @@ useEffect(() => {
   if (!isAuthenticated) return;
   localStorage.setItem("zeltyo_menu", JSON.stringify(menuItems));
 }, [isAuthenticated, menuItems]);
+
+useEffect(() => {
+  async function loadCustomersFromBackend() {
+    try {
+      const response = await fetch("https://zeltyo-backend.onrender.com/clients");
+      const data = await response.json();
+
+      if (data.ok && Array.isArray(data.clients)) {
+        setCustomers(data.clients);
+      }
+    } catch (error) {
+      console.error("Erreur chargement clients backend :", error);
+    }
+  }
+
+  loadCustomersFromBackend();
+}, []);
 
 function handleSaveMerchantContact() {
   try {
@@ -1744,6 +1938,121 @@ const activePromotionList = promotions.filter((p) => p.status === "Active");
 const pausedPromotionList = promotions.filter((p) => p.status === "Pause");
 const archivedPromotionList = promotions.filter((p) => p.status === "Archivée");
 
+const shiftsToday = getTodayShifts();
+
+// ===== KPI BUSINESS =====
+
+const averageTicket = 12; // panier moyen (modifiable plus tard)
+
+const estimatedRevenue = totalVisits * averageTicket;
+
+const totalWorkHours = shiftsToday.reduce((total, shift) => {
+  if (!shift.end) return total;
+  return total + (new Date(shift.end) - new Date(shift.start));
+}, 0) / 3600000;
+
+const totalPayrollCost = shiftsToday.reduce((total, shift) => {
+  if (!shift.end) return total;
+
+  const employee = employees.find(e => e.id === shift.employeeId);
+  const duration = new Date(shift.end) - new Date(shift.start);
+  const hours = duration / 3600000;
+
+  return total + (hours * (employee?.hourlyCost || 0));
+}, 0);
+
+const profitEstimate = estimatedRevenue - totalPayrollCost;
+
+// ===== ALERTES INTELLIGENTES =====
+
+const workingEmployees = employees.filter((employee) => isWorking(employee.id));
+
+const expensiveEmployees = employees.filter(
+  (employee) => Number(employee.hourlyCost || 0) >= 30
+);
+
+const openShifts = shiftsToday.filter((shift) => !shift.end);
+
+const businessAlerts = [
+  ...(profitEstimate < 0
+    ? [
+        {
+          type: "danger",
+          title: "Résultat estimé négatif",
+          message: "Le coût équipe dépasse le CA estimé aujourd’hui.",
+        },
+      ]
+    : []),
+
+  ...(openShifts.length > 0
+    ? [
+        {
+          type: "warning",
+          title: "Service en cours",
+          message: `${openShifts.length} employé(s) sont actuellement en service.`,
+        },
+      ]
+    : []),
+
+  ...(expensiveEmployees.length > 0
+    ? [
+        {
+          type: "warning",
+          title: "Coût horaire élevé",
+          message: `${expensiveEmployees.length} employé(s) ont un coût horaire supérieur ou égal à 30 €.`,
+        },
+      ]
+    : []),
+
+  ...(clientsToRelance.length > 0
+    ? [
+        {
+          type: "success",
+          title: "Clients à relancer",
+          message: `${clientsToRelance.length} client(s) sont proches d’une récompense.`,
+        },
+      ]
+    : []),
+
+  ...(inactiveClients.length > 0
+    ? [
+        {
+          type: "warning",
+          title: "Clients inactifs",
+          message: `${inactiveClients.length} client(s) n’ont pas été vus récemment.`,
+        },
+      ]
+    : []),
+];
+
+const totalByEmployee = shiftsToday.reduce((acc, shift) => {
+  if (!shift.end) return acc;
+
+  const duration =
+    new Date(shift.end) - new Date(shift.start);
+
+  if (!acc[shift.employeeId]) {
+    acc[shift.employeeId] = 0;
+  }
+
+  acc[shift.employeeId] += duration;
+
+  return acc;
+}, {});
+
+
+function restoreMenuItem(menuId) {
+  setMenuItems((prev) =>
+    prev.map((item) =>
+      item.id === menuId
+        ? { ...item, archived: false }
+        : item
+    )
+  );
+
+  showNotification("Produit restauré");
+}
+
 
   if (!isAuthenticated) {
     return (
@@ -1868,45 +2177,46 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
                 />
 
                 <button
-                  style={styles.buttonFull}
-                  onClick={async () => {
-                    try {
-                      const response = await fetch(
-                        buildApiUrl("/auth/forgot-password"),
-                        {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({ email: forgotEmail }),
-                        }
-                      );
+  style={styles.buttonFull}
+  onClick={async () => {
+    try {
+      if (!forgotEmail.trim()) {
+        showNotification("Email requis");
+        return;
+      }
 
-                      const data = await response.json();
+      const response = await fetch(
+        buildApiUrl("/auth/forgot-password"),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: forgotEmail }),
+        }
+      );
 
-                      if (!response.ok) {
-                        showNotification("Erreur serveur");
-                        return;
-                      }
+      const data = await response.json();
 
-                      showNotification("Lien envoyé");
-                      setShowForgot(false);
-                      setForgotEmail("");
+      if (!response.ok) {
+        showNotification(data.error || "Erreur serveur");
+        return;
+      }
 
-                      if (!data.resetToken) {
-                        showNotification("Token de réinitialisation manquant");
-                        return;
-                      }
+      // ✅ UX PRO
+      showNotification("📩 Email de réinitialisation envoyé");
 
-                      window.location.href = `/reset-password?token=${data.resetToken}`;
-                    } catch (error) {
-                      console.error(error);
-                      showNotification("Erreur de connexion");
-                    }
-                  }}
-                >
-                  Envoyer le lien
-                </button>
+      setShowForgot(false);
+      setForgotEmail("");
+
+    } catch (error) {
+      console.error(error);
+      showNotification("Erreur de connexion");
+    }
+  }}
+>
+  Envoyer le lien
+</button>
               </div>
             )}
 
@@ -2049,9 +2359,15 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
 
             <div style={styles.heroStat}>
               <div style={styles.heroStatLabel}>Promotions actives</div>
-              <div style={styles.heroStatValue}>{activePromos}</div>
+              <div style={styles.heroStatValue}>{activePromos} 🔥</div>
               <div style={styles.heroStatMeta}>Campagnes en diffusion</div>
             </div>
+
+            <div style={styles.heroStat}>
+  <div style={styles.heroStatLabel}>CA estimé</div>
+  <div style={styles.heroStatValue}>{estimatedRevenue} €</div>
+  <div style={styles.heroStatMeta}>Basé sur les visites</div>
+</div>
           </div>
         </div>
 
@@ -2060,7 +2376,15 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
         <div style={styles.stickyShell}>
           <div style={styles.stickyCard}>
             <div style={styles.nav}>
-              {TABS.map((tab) => (
+              {TABS
+  .filter((tab) => {
+    // 🔥 Si onboarding actif → on affiche tout (ou juste onboarding si tu veux être strict)
+    if (activeTab === "onboarding") return true;
+
+    // 🔥 Sinon → on bloque tant que commerce pas configuré
+    return businessName && businessName.trim() !== "";
+  })
+  .map((tab) => (
                 <button
                   key={tab.key}
                   style={styles.navBtn(activeTab === tab.key)}
@@ -2172,15 +2496,55 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
         {activeTab === "dashboard" && (
           <>
             <div style={styles.grid5}>
-              <StatCard label="Clients actifs" value={totalClients} />
-              <StatCard label="Points cumulés" value={totalPoints} />
-              <StatCard label="Visites enregistrées" value={totalVisits} />
-              <StatCard
-                label="Récompenses disponibles"
-                value={totalRewards}
-              />
-              <StatCard label="Promotions actives" value={activePromos} />
-            </div>
+  <StatCard label="Clients actifs" value={totalClients} />
+  <StatCard label="Visites" value={totalVisits} />
+  <StatCard label="CA estimé" value={`${estimatedRevenue} €`} />
+  <StatCard label="Heures travaillées" value={`${totalWorkHours.toFixed(1)} h`} />
+  <StatCard label="Coût équipe" value={`${totalPayrollCost.toFixed(2)} €`} />
+  <StatCard label="Résultat estimé" value={`${profitEstimate.toFixed(2)} €`} />
+</div>
+
+<div style={styles.card}>
+  <h3 style={styles.cardTitle}>Alertes intelligentes</h3>
+
+  {businessAlerts.length === 0 ? (
+    <p style={styles.muted}>Aucune alerte pour le moment. Tout semble stable.</p>
+  ) : (
+    <div style={styles.tableLike}>
+      {businessAlerts.map((alert, index) => (
+        <div
+          key={`${alert.title}-${index}`}
+          style={{
+            ...styles.promoCard,
+            border:
+              alert.type === "danger"
+                ? "1px solid rgba(201,75,50,0.55)"
+                : alert.type === "success"
+                ? "1px solid rgba(34,197,94,0.45)"
+                : "1px solid rgba(217,122,50,0.45)",
+            background:
+              alert.type === "danger"
+                ? "rgba(201,75,50,0.12)"
+                : alert.type === "success"
+                ? "rgba(34,197,94,0.10)"
+                : "rgba(217,122,50,0.12)",
+          }}
+        >
+          <div style={{ fontWeight: 900, color: COLORS.goldLight }}>
+            {alert.type === "danger"
+              ? "🔴 "
+              : alert.type === "success"
+              ? "🟢 "
+              : "🟠 "}
+            {alert.title}
+          </div>
+
+          <div style={styles.muted}>{alert.message}</div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
 
             <div style={styles.grid2}>
   <div style={styles.card}>
@@ -2219,19 +2583,33 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
     </p>
   </div>
 
+  <h3>📅 Aujourd’hui</h3>
+
+{getTodayShifts().map((s) => {
+  const emp = employees.find((e) => e.id === s.employeeId);
+
+  return (
+    <div key={s.id}>
+      {emp?.name} — {new Date(s.start).toLocaleTimeString()}
+      {" → "}
+      {s.end ? new Date(s.end).toLocaleTimeString() : "En service"}
+    </div>
+  );
+})}
+
   <div style={styles.card}>
     <h3 style={styles.cardTitle}>Valider une visite</h3>
-    <select
-      style={styles.input}
-      value={scanId}
-      onChange={(e) => setScanId(e.target.value)}
-    >
-      {customers.map((customer) => (
-        <option key={customer.id} value={customer.id}>
-          {customer.name} — {customer.id}
-        </option>
-      ))}
-    </select>
+   <select
+  style={styles.input}
+  value={scanId}
+  onChange={(e) => setScanId(e.target.value)}
+>
+  {customers.map((customer) => (
+    <option key={customer.id} value={customer.id}>
+      {customer.name} — {customer.loyaltyId || customer.id}
+    </option>
+  ))}
+</select>
     <button style={styles.buttonFull} onClick={rewardVisit}>
       Ajouter 1 point après validation
     </button>
@@ -2325,974 +2703,585 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
         )}
 
        {activeTab === "clients" && (
+  <ClientsModule
+    filteredCustomers={filteredCustomers}
+    search={search}
+    setSearch={setSearch}
+    styles={styles}
+    COLORS={COLORS}
+    generateMessage={generateMessage}
+    useReward={useReward}
+    openWhatsApp={openWhatsApp}
+    addLog={addLog}
+    showNotification={showNotification}
+  />
+)}
+
+{activeTab === "onboarding" && (
   <div style={styles.card}>
-    <h3 style={styles.cardTitle}>Base clients</h3>
-
-    <div style={styles.searchWrap}>
-      <input
-        style={styles.input}
-        placeholder="Rechercher un client par nom, email ou identifiant"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-      <div style={styles.previewBox}>
-        <strong>Vue rapide</strong>
-        <p style={{ marginBottom: 0 }}>
-          Clients affichés : {filteredCustomers.length}
-        </p>
-      </div>
-    </div>
-
-    <div style={styles.customerGrid}>
-      {filteredCustomers.map((customer) => (
-        <div key={customer.id} style={styles.customerCard}>
-          <div style={styles.rowBetween}>
-            <div>
-              <div style={{ fontWeight: 900 }}>{customer.name}</div>
-              <div style={styles.muted}>{customer.id}</div>
-            </div>
-            <span style={styles.badge}>{customer.tier}</span>
-          </div>
-
-          <div style={styles.fakeQrWrap}>
-            <QRCodeSVG
-  value={`https://zeltyo-clients.netlify.app/card/${customer.id}`}
-  size={120}
-  bgColor="#FFFFFF"
-  fgColor="#111111"
-  level="H"
-  includeMargin={false}
-/>
-<button
-  style={styles.buttonSecondary}
-  onClick={() => {
-    const cardLink = `https://zeltyo-clients.netlify.app/card/${customer.id}`;
-    navigator.clipboard.writeText(cardLink);
-    showNotification("Lien de carte fidélité copié");
-  }}
->
-  Copier le lien carte fidélité
-</button>
-            <div
-              style={{
-                marginTop: "10px",
-                fontSize: "12px",
-                color: COLORS.textSoft,
-              }}
-            >
-              Carte fidélité digitale
-            </div>
-          </div>
-
-          <div style={styles.kpiLine}>
-            <div>
-              Email : <strong>{customer.email || "Non renseigné"}</strong>
-            </div>
-            <div>
-              Téléphone :{" "}
-              <strong>{customer.phone || "Non renseigné"}</strong>
-            </div>
-            <div>
-              Points : <strong>{customer.points}</strong>
-            </div>
-            <div>
-              Visites : <strong>{customer.visits}</strong>
-            </div>
-            <div>
-              Récompenses : <strong>{customer.rewardsAvailable}</strong>
-            </div>
-            <div>
-              Dernière visite : <strong>{customer.lastVisit}</strong>
-            </div>
-          </div>
-
-          <button
-            style={styles.buttonReward}
-            onClick={() => useReward(customer.id)}
-            disabled={customer.rewardsAvailable <= 0}
-          >
-            Utiliser une récompense
-          </button>
-
-          <button
-            style={styles.buttonSecondary}
-            onClick={() => {
-              navigator.clipboard.writeText(generateMessage(customer));
-              addLog(
-                "A copié un message client",
-                `${customer.name} (${customer.id})`
-              );
-              showNotification("Message client copié");
-            }}
-          >
-            Copier message client
-          </button>
-
-          <button
-            style={styles.buttonWhatsapp}
-            onClick={() => openWhatsApp(customer)}
-          >
-            Envoyer via WhatsApp
-          </button>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
-
-{activeTab === "promos" && (
-  <div style={styles.grid2}>
-    <div
-      style={{
-        ...styles.card,
-        gridColumn: "1 / -1",
-      }}
-    >
-      <h3 style={styles.cardTitle}>Segmentation intelligente</h3>
-
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          marginBottom: "12px",
-          flexWrap: "wrap",
-        }}
-      >
-        <button
-          onClick={
-            currentUser.role === "admin"
-              ? () => sendSmart("inactive")
-              : undefined
-          }
-          disabled={currentUser.role !== "admin"}
-          style={styles.buttonGhost}
-        >
-          🔁 Inactifs
-        </button>
-
-        <button
-          onClick={
-            currentUser.role === "admin"
-              ? () => sendSmart("vip")
-              : undefined
-          }
-          disabled={currentUser.role !== "admin"}
-          style={styles.buttonGhost}
-        >
-          💎 VIP
-        </button>
-
-        <button
-          onClick={
-            currentUser.role === "admin"
-              ? () => sendSmart("near_reward")
-              : undefined
-          }
-          disabled={currentUser.role !== "admin"}
-          style={styles.buttonGhost}
-        >
-          🎁 Presque récompense
-        </button>
-      </div>
-
-      <p style={styles.helper}>
-        Envoyez une promotion ciblée selon le comportement client : clients
-        inactifs, VIP ou proches d’une récompense.
-      </p>
-    </div>
-
-    <div style={styles.card}>
-      <h3 style={styles.cardTitle}>Gérer les promotions</h3>
-      <div style={{ marginBottom: "14px" }}>
-        <span
-          style={
-            currentUser.role === "admin"
-              ? styles.badgeGreen
-              : styles.badgeOrange
-          }
-        >
-          {currentUser.role === "admin"
-            ? "Vous pouvez créer et modifier les promotions"
-            : "Mode employé : consultation uniquement"}
-        </span>
-      </div>
-
-      <input
-  style={styles.input}
-  placeholder="Texte du bouton (ex: Réserver maintenant)"
-  value={promo.ctaLabel}
-  onChange={(e) => setPromo({ ...promo, ctaLabel: e.target.value })}
-/>
-
-<input
-  style={styles.input}
-  placeholder="Lien du bouton (https://...)"
-  value={promo.ctaUrl}
-  onChange={(e) => setPromo({ ...promo, ctaUrl: e.target.value })}
-/>
-
-      <input
-        style={styles.input}
-        placeholder="Titre de l'offre"
-        value={promo.title}
-        onChange={(e) => setPromo({ ...promo, title: e.target.value })}
-        disabled={currentUser.role !== "admin"}
-      />
-
-      <input
-        style={styles.input}
-        placeholder="Code promotionnel"
-        value={promo.code}
-        onChange={(e) => setPromo({ ...promo, code: e.target.value })}
-        disabled={currentUser.role !== "admin"}
-      />
-
-      <select
-        style={styles.input}
-        value={promo.channel}
-        onChange={(e) => setPromo({ ...promo, channel: e.target.value })}
-        disabled={currentUser.role !== "admin"}
-      >
-        <option>Instagram</option>
-        <option>Facebook</option>
-        <option>WhatsApp</option>
-        <option>Email</option>
-        <option>En boutique</option>
-      </select>
-
-      <textarea
-        style={styles.textarea}
-        placeholder="Description claire et orientée bénéfice"
-        value={promo.description}
-        onChange={(e) =>
-          setPromo({ ...promo, description: e.target.value })
-        }
-        disabled={currentUser.role !== "admin"}
-      />
-
-      <button style={styles.buttonFull} onClick={addPromotion}>
-        Publier la promotion
-      </button>
-
-      <p style={styles.helper}>
-        Le commerçant reste autonome pour gérer ses promotions. L’administrateur
-        conserve le contrôle sur la création, la mise en pause et le suivi de
-        chaque offre.
-      </p>
-    </div>
-
-    <div style={styles.card}>
-      <h3 style={styles.cardTitle}>Aperçu du message</h3>
-      <div style={styles.previewBox}>
-        <div style={{ whiteSpace: "pre-line", lineHeight: 1.7 }}>
-          {socialPreview}
-        </div>
-      </div>
-    </div>
-
-    <div style={{ ...styles.card, gridColumn: "1 / -1" }}>
-      <h3 style={styles.cardTitle}>Historique des promotions</h3>
-
-      {activePromotionList.length > 0 && (
-        <>
-          <h4 style={{ ...styles.sectionTitle, fontSize: "18px" }}>
-            Promotions actives
-          </h4>
-          {activePromotionList.map((promotion) => (
-            <div key={promotion.id} style={styles.promoCard}>
-              <div style={styles.rowBetween}>
-                <div>
-                  <div style={styles.promoTitle}>{promotion.title}</div>
-                  <div style={styles.muted}>
-                    Canal : {promotion.channel} • Code : {promotion.code}
-                  </div>
-                  <div style={styles.muted}>
-                    Créée par : {promotion.createdBy} • {promotion.createdAt}
-                  </div>
-                </div>
-
-                <div
-                  style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
-                >
-                  <span style={styles.badgeGreen}>{promotion.status}</span>
-
-                  <button
-                    style={{ ...styles.buttonGhost, padding: "8px 12px" }}
-                    onClick={() => togglePromotionStatus(promotion.id)}
-                  >
-                    Mettre en pause
-                  </button>
-
-                  <button
-                    style={{ ...styles.buttonGhost, padding: "8px 12px" }}
-                    onClick={() => archivePromotion(promotion.id)}
-                  >
-                    Archiver
-                  </button>
-                </div>
-              </div>
-
-              <p style={{ marginBottom: 0, lineHeight: 1.7 }}>
-                {promotion.description}
-              </p>
-              {promotion.ctaUrl && (
-  <button
-    style={styles.buttonSecondary}
-    onClick={() => window.open(promotion.ctaUrl, "_blank")}
-  >
-    {promotion.ctaLabel || "Voir l'offre"}
-  </button>
-)}
-            </div>
-          ))}
-        </>
-      )}
-
-
-      {pausedPromotionList.length > 0 && (
-        <>
-          <h4
-            style={{
-              ...styles.sectionTitle,
-              fontSize: "18px",
-              marginTop: "18px",
-            }}
-          >
-            Promotions en pause
-          </h4>
-          {pausedPromotionList.map((promotion) => (
-            <div key={promotion.id} style={styles.promoCard}>
-              <div style={styles.rowBetween}>
-                <div>
-                  <div style={styles.promoTitle}>{promotion.title}</div>
-                  <div style={styles.muted}>
-                    Canal : {promotion.channel} • Code : {promotion.code}
-                  </div>
-                  <div style={styles.muted}>
-                    Créée par : {promotion.createdBy} • {promotion.createdAt}
-                  </div>
-                </div>
-
-                <div
-                  style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
-                >
-                  <span style={styles.badgeOrange}>{promotion.status}</span>
-
-                  <button
-                    style={{ ...styles.buttonGhost, padding: "8px 12px" }}
-                    onClick={() => togglePromotionStatus(promotion.id)}
-                  >
-                    Réactiver
-                  </button>
-
-                  <button
-                    style={{ ...styles.buttonGhost, padding: "8px 12px" }}
-                    onClick={() => archivePromotion(promotion.id)}
-                  >
-                    Archiver
-                  </button>
-                </div>
-              </div>
-
-              <p style={{ marginBottom: 0, lineHeight: 1.7 }}>
-                {promotion.description}
-              </p>
-            </div>
-          ))}
-        </>
-      )}
-
-      {archivedPromotionList.length > 0 && (
-        <>
-          <h4
-            style={{
-              ...styles.sectionTitle,
-              fontSize: "18px",
-              marginTop: "18px",
-            }}
-          >
-            Promotions archivées
-          </h4>
-          {archivedPromotionList.map((promotion) => (
-            <div key={promotion.id} style={styles.promoCard}>
-              <div style={styles.rowBetween}>
-                <div>
-                  <div style={styles.promoTitle}>{promotion.title}</div>
-                  <div style={styles.muted}>
-                    Canal : {promotion.channel} • Code : {promotion.code}
-                  </div>
-                  <div style={styles.muted}>
-                    Créée par : {promotion.createdBy} • {promotion.createdAt}
-                  </div>
-                  {promotion.archivedAt && (
-                    <div style={styles.muted}>
-                      Archivée le : {promotion.archivedAt}
-                    </div>
-                  )}
-                </div>
-
-                <span style={styles.badge}>Archivée</span>
-              </div>
-
-              <p style={{ marginBottom: 0, lineHeight: 1.7 }}>
-                {promotion.description}
-              </p>
-            </div>
-          ))}
-        </>
-      )}
-
-      {promotions.length === 0 && (
-        <p style={styles.muted}>
-          Aucune promotion enregistrée pour le moment.
-        </p>
-      )}
-    </div>
-  </div>
-)}
-
-{activeTab === "team" && (
-  <div style={styles.grid2}>
-    <div style={styles.card}>
-      <h3 style={styles.cardTitle}>Équipe</h3>
-      <div style={{ marginBottom: "18px" }}>
-        <span
-          style={
-            currentUser.role === "admin"
-              ? styles.badgeGreen
-              : styles.badgeOrange
-          }
-        >
-          {currentUser.role === "admin"
-            ? "Vous pouvez ajouter un employé ou un administrateur"
-            : "Mode employé : consultation uniquement"}
-        </span>
-      </div>
-
-      <input
-        style={styles.input}
-        placeholder="Nom du membre"
-        value={newEmployee.name}
-        onChange={(e) =>
-          setNewEmployee({ ...newEmployee, name: e.target.value })
-        }
-        disabled={currentUser.role !== "admin"}
-      />
-
-      <input
-        style={styles.input}
-        placeholder="Email du membre"
-        value={newEmployee.email}
-        onChange={(e) =>
-          setNewEmployee({ ...newEmployee, email: e.target.value })
-        }
-        disabled={currentUser.role !== "admin"}
-      />
-
-      <select
-        style={styles.input}
-        value={newEmployee.role}
-        onChange={(e) =>
-          setNewEmployee({ ...newEmployee, role: e.target.value })
-        }
-        disabled={currentUser.role !== "admin"}
-      >
-        <option value="employee">Employé</option>
-        <option value="admin">Administrateur</option>
-      </select>
-
-      <button style={styles.buttonFull} onClick={addEmployee}>
-        Ajouter un employé ou un administrateur
-      </button>
-
-      <div style={{ ...styles.tableLike, marginTop: "20px" }}>
-        {employees.map((employee) => (
-          <div key={employee.id} style={styles.promoCard}>
-            <div style={styles.rowBetween}>
-              <div>
-                <div style={{ fontWeight: 900 }}>{employee.name}</div>
-                <div style={styles.muted}>
-                  {employee.id} • {employee.email}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <span
-                  style={
-                    employee.role === "admin"
-                      ? styles.badgeGreen
-                      : styles.badgeBlue
-                  }
-                >
-                  {employee.role === "admin"
-                    ? "Administrateur"
-                    : "Employé"}
-                </span>
-                <span style={styles.badge}>{employee.status}</span>
-              </div>
-            </div>
-            <div style={styles.kpiLine}>
-              Dernière action connue :{" "}
-              <strong>{employee.lastAction}</strong>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    <div style={styles.card}>
-      <h3 style={styles.cardTitle}>Journal de contrôle</h3>
-      <p style={styles.helper}>
-        Cet espace permet à l’administrateur de vérifier la bonne exécution :
-        qui a ajouté un client, validé une visite, créé une promotion, préparé
-        une relance ou ajouté un nouveau membre.
-      </p>
-      <div style={styles.tableLike}>
-        {activityLog.map((item) => (
-          <div key={item.id} style={styles.promoCard}>
-            <div style={styles.rowBetween}>
-              <div>
-                <div style={{ fontWeight: 900 }}>{item.actor}</div>
-                <div style={styles.muted}>{item.date}</div>
-              </div>
-              <span
-                style={
-                  item.role === "admin"
-                    ? styles.badgeGreen
-                    : styles.badgeBlue
-                }
-              >
-                {item.role === "admin" ? "Admin" : "Employé"}
-              </span>
-            </div>
-            <div style={styles.kpiLine}>
-              <div>{item.action}</div>
-              <div>
-                <strong>{item.detail}</strong>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-)}
-
-
-        {activeTab === "settings" && (
-          <div style={styles.grid2}>
-            <div style={styles.card}>
-             <h3 style={styles.cardTitle}>Coordonnées du commerçant</h3>
-
-<input
-  style={styles.input}
-  placeholder="Nom du commerce"
-  value={merchantContact.shopName}
-  onChange={(e) =>
-    setMerchantContact({ ...merchantContact, shopName: e.target.value })
-  }
-/>
-
-<input
-  style={styles.input}
-  placeholder="Nom du responsable"
-  value={merchantContact.ownerName}
-  onChange={(e) =>
-    setMerchantContact({ ...merchantContact, ownerName: e.target.value })
-  }
-/>
-
-<input
-  style={styles.input}
-  placeholder="Téléphone"
-  value={merchantContact.phone}
-  onChange={(e) =>
-    setMerchantContact({ ...merchantContact, phone: e.target.value })
-  }
-/>
-
-<input
-  style={styles.input}
-  placeholder="Email"
-  value={merchantContact.email}
-  onChange={(e) =>
-    setMerchantContact({ ...merchantContact, email: e.target.value })
-  }
-/>
-
-<input
-  style={styles.input}
-  placeholder="Adresse"
-  value={merchantContact.address}
-  onChange={(e) =>
-    setMerchantContact({ ...merchantContact, address: e.target.value })
-  }
-/>
-
-<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-  <input
-    style={styles.input}
-    placeholder="Code postal"
-    value={merchantContact.postalCode}
-    onChange={(e) =>
-      setMerchantContact({ ...merchantContact, postalCode: e.target.value })
-    }
-  />
-
-  <input
-    style={styles.input}
-    placeholder="Ville"
-    value={merchantContact.city}
-    onChange={(e) =>
-      setMerchantContact({ ...merchantContact, city: e.target.value })
-    }
-  />
-</div>
-
-<input
-  style={styles.input}
-  placeholder="Pays"
-  value={merchantContact.country}
-  onChange={(e) =>
-    setMerchantContact({ ...merchantContact, country: e.target.value })
-  }
-/>
-
-<input
-  style={styles.input}
-  placeholder="Site web"
-  value={merchantContact.website}
-  onChange={(e) =>
-    setMerchantContact({ ...merchantContact, website: e.target.value })
-  }
-/>
-
-<input
-  style={styles.input}
-  placeholder="Lien Google Avis (https://g.page/.../review)"
-  value={merchantContact.reviewUrl}
-  onChange={(e) =>
-    setMerchantContact({ ...merchantContact, reviewUrl: e.target.value })
-  }
-/>
-
-<input
-  style={styles.input}
-  placeholder="N° TVA / identifiant entreprise"
-  value={merchantContact.vatNumber}
-  onChange={(e) =>
-    setMerchantContact({ ...merchantContact, vatNumber: e.target.value })
-  }
-/>
-
-<button style={styles.buttonFull} onClick={handleSaveMerchantContact}>
-  Enregistrer les coordonnées du commerçant
-</button>
-
-<button style={styles.buttonDanger} onClick={handleCreateNewBusiness}>
-  Créer une nouvelle entreprise et repartir de zéro
-</button>
-
-<p style={styles.helper}>
-  Ces informations serviront de base pour l’identité du commerce, les futurs
-  documents, les réglages avancés et les écrans publics de l’application.
-</p>
-
-<h3 style={styles.cardTitle}>Carte menu emporter</h3>
-
-<MenuUploader onUpload={handleMenuUpload} />
-
-{menuImage && (
-  <div style={{ marginTop: "18px", marginBottom: "18px" }}>
-    <img
-      src={menuImage}
-      alt="Carte menu"
-      style={{
-        width: "100%",
-        borderRadius: "16px",
-        border: `1px solid ${COLORS.border}`,
-        boxShadow: "0 12px 28px rgba(0,0,0,0.35)",
-      }}
+    <h3 style={styles.cardTitle}>🚀 Configuration de votre commerce</h3>
+
+    <p style={styles.helper}>
+      En quelques étapes, votre espace Zeltyo sera prêt à être utilisé en boutique.
+    </p>
+
+    <input
+      style={styles.input}
+      placeholder="Nom du commerce"
+      value={businessName}
+      onChange={(e) => setBusinessName(e.target.value)}
+    />
+
+    <input
+      style={styles.input}
+      placeholder="Ville"
+      value={locationSettings.city}
+      onChange={(e) =>
+        setLocationSettings({
+          ...locationSettings,
+          city: e.target.value,
+        })
+      }
+    />
+
+    <input
+      style={styles.input}
+      placeholder="Objectif fidélité (ex: 10)"
+      value={rewardGoal}
+      onChange={(e) => setRewardGoal(e.target.value)}
+    />
+
+    <input
+      style={styles.input}
+      placeholder="Récompense (ex: 1 café offert)"
+      value={rewardLabel}
+      onChange={(e) => setRewardLabel(e.target.value)}
     />
 
     <button
-      style={{
-        ...styles.buttonDanger,
-        marginTop: "12px",
-      }}
+      style={styles.buttonFull}
       onClick={() => {
-        setMenuImage("");
-        localStorage.removeItem("merchant_menu_image");
-        showNotification("Image du menu supprimée");
+        if (!businessName || !rewardGoal || !rewardLabel) {
+          showNotification("Merci de compléter les champs");
+          return;
+        }
+
+        showNotification("Commerce configuré 🚀");
+        setActiveTab("dashboard");
       }}
     >
-      Supprimer l’image du menu
+      Terminer la configuration
     </button>
   </div>
 )}
 
-<input
-  style={styles.input}
-  placeholder="Nom du produit"
-  value={newMenuItem.name}
-  onChange={(e) =>
-    setNewMenuItem({ ...newMenuItem, name: e.target.value })
-  }
-/>
-
-<input
-  style={styles.input}
-  placeholder="Description courte"
-  value={newMenuItem.description}
-  onChange={(e) =>
-    setNewMenuItem({ ...newMenuItem, description: e.target.value })
-  }
-/>
-
-<input
-  style={styles.input}
-  type="number"
-  step="0.01"
-  placeholder="Prix"
-  value={newMenuItem.price}
-  onChange={(e) =>
-    setNewMenuItem({ ...newMenuItem, price: e.target.value })
-  }
-/>
-
-<select
-  style={styles.input}
-  value={newMenuItem.category}
-  onChange={(e) =>
-    setNewMenuItem({ ...newMenuItem, category: e.target.value })
-  }
->
-  <option value="Snacking">Snacking</option>
-  <option value="Boissons">Boissons</option>
-  <option value="Desserts">Desserts</option>
-  <option value="Plats">Plats</option>
-  <option value="Formules">Formules</option>
-</select>
-
-<button style={styles.buttonFull} onClick={addMenuItem}>
-  Ajouter au menu
-</button>
-
-<div style={{ marginTop: "18px", display: "grid", gap: "12px" }}>
-  {menuItems.length === 0 ? (
-    <p style={styles.muted}>Aucun produit dans la carte menu pour le moment.</p>
-  ) : (
-    menuItems.map((item) => (
-      <div key={item.id} style={styles.promoCard}>
-        <div style={styles.rowBetween}>
-          <div>
-            <div style={{ fontWeight: 900 }}>{item.name}</div>
-            <div style={styles.muted}>
-              {item.category} • {Number(item.price).toFixed(2)} €
-            </div>
-          </div>
-
-          <span style={item.active ? styles.badgeGreen : styles.badgeOrange}>
-            {item.active ? "Actif" : "Inactif"}
-          </span>
-        </div>
-
-        {item.description ? (
-          <div style={styles.kpiLine}>{item.description}</div>
-        ) : null}
-
-        <button
-          style={{ ...styles.buttonGhost, marginTop: "10px" }}
-          onClick={() => toggleMenuItem(item.id)}
-        >
-          {item.active ? "Désactiver" : "Réactiver"}
-        </button>
-      </div>
-    ))
-  )}
-</div>
-
-<div
-  style={{
-    height: "1px",
-    background: COLORS.border,
-    margin: "22px 0",
-  }}
-/>
-              <h3 style={styles.cardTitle}>Paramètres du programme</h3>
-              <input
-                style={styles.input}
-                placeholder="Nom du commerce"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-              />
-              <input
-                style={styles.input}
-                type="number"
-                placeholder="Objectif de points"
-                value={rewardGoal}
-                onChange={(e) => setRewardGoal(e.target.value)}
-              />
-              <input
-                style={styles.input}
-                placeholder="Libellé de la récompense"
-                value={rewardLabel}
-                onChange={(e) => setRewardLabel(e.target.value)}
-              />
-              <input
-                style={styles.input}
-                placeholder="Couleur principale"
-                value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
-              />
-
-              <h3 style={{ ...styles.sectionTitle, marginTop: "24px" }}>
-                Zone géographique
-              </h3>
-
-              <input
-                style={styles.input}
-                placeholder="Pays"
-                value={locationSettings.country}
-                onChange={(e) =>
-                  setLocationSettings({
-                    ...locationSettings,
-                    country: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                style={styles.input}
-                placeholder="Ville"
-                value={locationSettings.city}
-                onChange={(e) =>
-                  setLocationSettings({
-                    ...locationSettings,
-                    city: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                style={styles.input}
-                placeholder="Nom de la zone"
-                value={locationSettings.zoneLabel}
-                onChange={(e) =>
-                  setLocationSettings({
-                    ...locationSettings,
-                    zoneLabel: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                style={styles.input}
-                placeholder="Latitude"
-                value={locationSettings.latitude}
-                onChange={(e) =>
-                  setLocationSettings({
-                    ...locationSettings,
-                    latitude: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                style={styles.input}
-                placeholder="Longitude"
-                value={locationSettings.longitude}
-                onChange={(e) =>
-                  setLocationSettings({
-                    ...locationSettings,
-                    longitude: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                style={styles.input}
-                type="number"
-                step="0.1"
-                placeholder="Rayon en km"
-                value={locationSettings.radiusKm}
-                onChange={(e) =>
-                  setLocationSettings({
-                    ...locationSettings,
-                    radiusKm: e.target.value,
-                  })
-                }
-              />
-
-              <p style={styles.helper}>
-                Définissez la zone du commerce et le rayon d’action marketing.
-                Ce périmètre pourra ensuite servir pour les campagnes locales,
-                les notifications ciblées et l’ajustement du rayon selon la
-                densité de la zone.
-              </p>
-
-              <button style={styles.buttonFull}>Enregistrer les réglages</button>
-            </div>
-
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Aperçu marque</h3>
-              <div
-                style={{
-                  borderRadius: "22px",
-                  padding: "24px",
-                  color: "white",
-                  background: `linear-gradient(135deg, ${primaryColor}, #F2A65A)`,
-                  minHeight: "220px",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
-                }}
-              >
-                <div style={styles.heroBadge}>Carte de fidélité</div>
-                <h4
-  style={{
-    fontSize: "32px",
-    margin: "10px 0",
-    fontWeight: 900,
-  }}
->
-  {merchantContact.shopName || businessName}
-</h4>
-<p style={{ lineHeight: 1.7, opacity: 0.95, marginTop: "12px" }}>
-  Responsable : {merchantContact.ownerName || "Non renseigné"}
-</p>
-<p style={{ lineHeight: 1.7, opacity: 0.95 }}>
-  Contact : {merchantContact.phone || "Téléphone non renseigné"} •{" "}
-  {merchantContact.email || "Email non renseigné"}
-</p>
-<p style={{ lineHeight: 1.7, opacity: 0.95, marginBottom: 0 }}>
-  Adresse :{" "}
-  {merchantContact.address
-    ? `${merchantContact.address}, ${merchantContact.postalCode || ""} ${
-        merchantContact.city || ""
-      }, ${merchantContact.country || ""}`
-    : "Adresse non renseignée"}
-</p>
-{merchantContact.reviewUrl && (
-  <button
-    style={styles.buttonSecondary}
-    onClick={() => window.open(merchantContact.reviewUrl, "_blank")}
-  >
-    ⭐ Laisser un avis
-  </button>
+{activeTab === "promos" && (
+  <PromosModule
+    currentUser={currentUser}
+    promo={promo}
+    setPromo={setPromo}
+    addPromotion={addPromotion}
+    sendSmart={sendSmart}
+    socialPreview={socialPreview}
+    promotions={promotions}
+    activePromotionList={activePromotionList}
+    pausedPromotionList={pausedPromotionList}
+    archivedPromotionList={archivedPromotionList}
+    togglePromotionStatus={togglePromotionStatus}
+    archivePromotion={archivePromotion}
+    styles={styles}
+  />
 )}
-                <p style={{ lineHeight: 1.7 }}>
-                  {rewardGoal} points = {rewardLabel}
-                </p>
-                <p style={{ lineHeight: 1.7, opacity: 0.95 }}>
-                  Interface claire, programme rassurant et usage simple pour
-                  l’équipe, avec supervision côté administrateur.
-                </p>
-                <p style={{ lineHeight: 1.7, opacity: 0.95, marginBottom: 0 }}>
-                  Zone : {locationSettings.zoneLabel} • {locationSettings.city} •{" "}
-                  {locationSettings.country} • Rayon : {locationSettings.radiusKm} km
-                </p>
+
+{activeTab === "team" && (
+  <TeamModule
+    currentUser={currentUser}
+    newEmployee={newEmployee}
+    setNewEmployee={setNewEmployee}
+    addEmployee={addEmployee}
+    employees={employees}
+    isWorking={isWorking}
+    startShift={startShift}
+    endShift={endShift}
+    getTodayShifts={getTodayShifts}
+    totalByEmployee={totalByEmployee}
+    activityLog={activityLog}
+    styles={styles}
+    COLORS={COLORS}
+    showNotification={showNotification}
+  />
+
+)}
+
+{activeTab === "settings" && (
+  <div style={styles.grid2}>
+    <div style={styles.card}>
+      <h3 style={styles.cardTitle}>Coordonnées du commerçant</h3>
+
+      <input
+        style={styles.input}
+        placeholder="Nom du commerce"
+        value={merchantContact.shopName}
+        onChange={(e) =>
+          setMerchantContact({ ...merchantContact, shopName: e.target.value })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Nom du responsable"
+        value={merchantContact.ownerName}
+        onChange={(e) =>
+          setMerchantContact({ ...merchantContact, ownerName: e.target.value })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Téléphone"
+        value={merchantContact.phone}
+        onChange={(e) =>
+          setMerchantContact({ ...merchantContact, phone: e.target.value })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Email"
+        value={merchantContact.email}
+        onChange={(e) =>
+          setMerchantContact({ ...merchantContact, email: e.target.value })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Adresse"
+        value={merchantContact.address}
+        onChange={(e) =>
+          setMerchantContact({ ...merchantContact, address: e.target.value })
+        }
+      />
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <input
+          style={styles.input}
+          placeholder="Code postal"
+          value={merchantContact.postalCode}
+          onChange={(e) =>
+            setMerchantContact({ ...merchantContact, postalCode: e.target.value })
+          }
+        />
+
+        <input
+          style={styles.input}
+          placeholder="Ville"
+          value={merchantContact.city}
+          onChange={(e) =>
+            setMerchantContact({ ...merchantContact, city: e.target.value })
+          }
+        />
+      </div>
+
+      <input
+        style={styles.input}
+        placeholder="Pays"
+        value={merchantContact.country}
+        onChange={(e) =>
+          setMerchantContact({ ...merchantContact, country: e.target.value })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Site web"
+        value={merchantContact.website}
+        onChange={(e) =>
+          setMerchantContact({ ...merchantContact, website: e.target.value })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Lien Google Avis (https://g.page/.../review)"
+        value={merchantContact.reviewUrl}
+        onChange={(e) =>
+          setMerchantContact({ ...merchantContact, reviewUrl: e.target.value })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="N° TVA / identifiant entreprise"
+        value={merchantContact.vatNumber}
+        onChange={(e) =>
+          setMerchantContact({ ...merchantContact, vatNumber: e.target.value })
+        }
+      />
+
+      <button style={styles.buttonFull} onClick={handleSaveMerchantContact}>
+        Enregistrer les coordonnées du commerçant
+      </button>
+
+      <button style={styles.buttonDanger} onClick={handleCreateNewBusiness}>
+        Créer une nouvelle entreprise et repartir de zéro
+      </button>
+
+      <p style={styles.helper}>
+        Ces informations serviront de base pour l’identité du commerce, les futurs
+        documents, les réglages avancés et les écrans publics de l’application.
+      </p>
+
+      <h3 style={styles.cardTitle}>Carte menu emporter</h3>
+
+      <MenuUploader onUpload={handleMenuUpload} />
+
+      {menuImage && (
+        <div style={{ marginTop: "18px", marginBottom: "18px" }}>
+          <img
+            src={menuImage}
+            alt="Carte menu"
+            style={{
+              width: "100%",
+              borderRadius: "16px",
+              border: `1px solid ${COLORS.border}`,
+              boxShadow: "0 12px 28px rgba(0,0,0,0.35)",
+            }}
+          />
+
+          <button
+            style={{
+              ...styles.buttonDanger,
+              marginTop: "12px",
+            }}
+            onClick={() => {
+              setMenuImage("");
+              localStorage.removeItem("merchant_menu_image");
+              showNotification("Image du menu supprimée");
+            }}
+          >
+            Supprimer l’image du menu
+          </button>
+        </div>
+      )}
+
+      <input
+        style={styles.input}
+        placeholder="Nom du produit"
+        value={newMenuItem.name}
+        onChange={(e) =>
+          setNewMenuItem({ ...newMenuItem, name: e.target.value })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Description courte"
+        value={newMenuItem.description}
+        onChange={(e) =>
+          setNewMenuItem({ ...newMenuItem, description: e.target.value })
+        }
+      />
+
+      <input
+        style={styles.input}
+        type="number"
+        step="0.01"
+        placeholder="Prix"
+        value={newMenuItem.price}
+        onChange={(e) =>
+          setNewMenuItem({ ...newMenuItem, price: e.target.value })
+        }
+      />
+
+      <select
+        style={styles.input}
+        value={newMenuItem.category}
+        onChange={(e) =>
+          setNewMenuItem({ ...newMenuItem, category: e.target.value })
+        }
+      >
+        <option value="Snacking">Snacking</option>
+        <option value="Boissons">Boissons</option>
+        <option value="Desserts">Desserts</option>
+        <option value="Plats">Plats</option>
+        <option value="Formules">Formules</option>
+      </select>
+
+      <button style={styles.buttonFull} onClick={addMenuItem}>
+        Ajouter au menu
+      </button>
+
+      <div style={{ marginTop: "18px", display: "grid", gap: "12px" }}>
+        {menuItems
+          .filter((item) => item.businessId === currentUser.businessId)
+          .filter((item) => !item.archived).length === 0 ? (
+          <p style={styles.muted}>Aucun produit actif dans la carte menu.</p>
+        ) : (
+          menuItems
+            .filter((item) => item.businessId === currentUser.businessId)
+            .filter((item) => !item.archived)
+            .map((item) => (
+              <div key={item.id} style={styles.promoCard}>
+                <div style={styles.rowBetween}>
+                  <div>
+                    <div style={{ fontWeight: 900 }}>{item.name}</div>
+                    <div style={styles.muted}>
+                      {item.category} • {Number(item.price).toFixed(2)} €
+                    </div>
+                  </div>
+
+                  <span style={item.active ? styles.badgeGreen : styles.badgeOrange}>
+                    {item.active ? "Actif" : "Inactif"}
+                  </span>
+                </div>
+
+                {item.description ? (
+                  <div style={styles.kpiLine}>{item.description}</div>
+                ) : null}
+
+                <button
+                  style={{ ...styles.buttonGhost, marginTop: "10px" }}
+                  onClick={() => toggleMenuItem(item.id)}
+                >
+                  {item.active ? "Désactiver" : "Réactiver"}
+                </button>
+
+                <button
+                  style={styles.buttonDanger}
+                  onClick={() => archiveMenuItem(item.id)}
+                >
+                  Archiver
+                </button>
               </div>
-            </div>
-          </div>
+            ))
         )}
+      </div>
+
+      <h3 style={styles.sectionTitle}>Produits archivés</h3>
+
+      {menuItems
+        .filter((item) => item.businessId === currentUser.businessId)
+        .filter((item) => item.archived).length === 0 ? (
+        <p style={styles.muted}>Aucun produit archivé.</p>
+      ) : (
+        menuItems
+          .filter((item) => item.businessId === currentUser.businessId)
+          .filter((item) => item.archived)
+          .map((item) => (
+            <div key={item.id} style={styles.promoCard}>
+              <div style={styles.rowBetween}>
+                <strong>{item.name}</strong>
+                <span style={styles.badgeOrange}>Archivé</span>
+              </div>
+
+              <button
+                style={styles.buttonSecondary}
+                onClick={() => restoreMenuItem(item.id)}
+              >
+                Restaurer
+              </button>
+            </div>
+          ))
+      )}
+
+      <div
+        style={{
+          height: "1px",
+          background: COLORS.border,
+          margin: "22px 0",
+        }}
+      />
+
+      <h3 style={styles.cardTitle}>Paramètres du programme</h3>
+
+      <input
+        style={styles.input}
+        placeholder="Nom du commerce"
+        value={businessName}
+        onChange={(e) => setBusinessName(e.target.value)}
+      />
+
+      <input
+        style={styles.input}
+        type="number"
+        placeholder="Objectif de points"
+        value={rewardGoal}
+        onChange={(e) => setRewardGoal(e.target.value)}
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Libellé de la récompense"
+        value={rewardLabel}
+        onChange={(e) => setRewardLabel(e.target.value)}
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Couleur principale"
+        value={primaryColor}
+        onChange={(e) => setPrimaryColor(e.target.value)}
+      />
+
+      <h3 style={{ ...styles.sectionTitle, marginTop: "24px" }}>
+        Zone géographique
+      </h3>
+
+      <input
+        style={styles.input}
+        placeholder="Pays"
+        value={locationSettings.country}
+        onChange={(e) =>
+          setLocationSettings({
+            ...locationSettings,
+            country: e.target.value,
+          })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Ville"
+        value={locationSettings.city}
+        onChange={(e) =>
+          setLocationSettings({
+            ...locationSettings,
+            city: e.target.value,
+          })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Nom de la zone"
+        value={locationSettings.zoneLabel}
+        onChange={(e) =>
+          setLocationSettings({
+            ...locationSettings,
+            zoneLabel: e.target.value,
+          })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Latitude"
+        value={locationSettings.latitude}
+        onChange={(e) =>
+          setLocationSettings({
+            ...locationSettings,
+            latitude: e.target.value,
+          })
+        }
+      />
+
+      <input
+        style={styles.input}
+        placeholder="Longitude"
+        value={locationSettings.longitude}
+        onChange={(e) =>
+          setLocationSettings({
+            ...locationSettings,
+            longitude: e.target.value,
+          })
+        }
+      />
+
+      <input
+        style={styles.input}
+        type="number"
+        step="0.1"
+        placeholder="Rayon en km"
+        value={locationSettings.radiusKm}
+        onChange={(e) =>
+          setLocationSettings({
+            ...locationSettings,
+            radiusKm: e.target.value,
+          })
+        }
+      />
+
+      <p style={styles.helper}>
+        Définissez la zone du commerce et le rayon d’action marketing.
+        Ce périmètre pourra ensuite servir pour les campagnes locales,
+        les notifications ciblées et l’ajustement du rayon selon la densité de la zone.
+      </p>
+
+      <button style={styles.buttonFull}>Enregistrer les réglages</button>
+    </div>
+
+    <div style={styles.card}>
+      <h3 style={styles.cardTitle}>Aperçu marque</h3>
+
+      <div
+        style={{
+          borderRadius: "22px",
+          padding: "24px",
+          color: "white",
+          background: `linear-gradient(135deg, ${primaryColor || "#D4AF37"}, #F2A65A)`,
+          minHeight: "220px",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
+        }}
+      >
+        <div style={styles.heroBadge}>Carte de fidélité</div>
+
+        <h4
+          style={{
+            fontSize: "32px",
+            margin: "10px 0",
+            fontWeight: 900,
+          }}
+        >
+          {merchantContact.shopName || businessName || "Nom du commerce"}
+        </h4>
+
+        <p style={{ lineHeight: 1.7, opacity: 0.95, marginTop: "12px" }}>
+          Responsable : {merchantContact.ownerName || "Non renseigné"}
+        </p>
+
+        <p style={{ lineHeight: 1.7, opacity: 0.95 }}>
+          Contact : {merchantContact.phone || "Téléphone non renseigné"} •{" "}
+          {merchantContact.email || "Email non renseigné"}
+        </p>
+
+        <p style={{ lineHeight: 1.7, opacity: 0.95, marginBottom: 0 }}>
+          Adresse :{" "}
+          {merchantContact.address
+            ? `${merchantContact.address}, ${merchantContact.postalCode || ""} ${
+                merchantContact.city || ""
+              }, ${merchantContact.country || ""}`
+            : "Adresse non renseignée"}
+        </p>
+
+        {merchantContact.reviewUrl && (
+          <button
+            style={styles.buttonSecondary}
+            onClick={() => window.open(merchantContact.reviewUrl, "_blank")}
+          >
+            ⭐ Laisser un avis
+          </button>
+        )}
+
+        <p style={{ lineHeight: 1.7 }}>
+          {rewardGoal || "0"} points = {rewardLabel || "Récompense non renseignée"}
+        </p>
+
+        <p style={{ lineHeight: 1.7, opacity: 0.95 }}>
+          Interface claire, programme rassurant et usage simple pour l’équipe,
+          avec supervision côté administrateur.
+        </p>
+
+        <p style={{ lineHeight: 1.7, opacity: 0.95, marginBottom: 0 }}>
+          Zone : {locationSettings.zoneLabel || "Zone non renseignée"} •{" "}
+          {locationSettings.city || "Ville non renseignée"} •{" "}
+          {locationSettings.country || "Pays non renseigné"} • Rayon :{" "}
+          {locationSettings.radiusKm || "0"} km
+        </p>
+      </div>
+    </div>
+  </div>
+)}
 
         <div style={styles.footer}>
           <div>{poweredByLabel}</div>
@@ -3309,72 +3298,72 @@ const archivedPromotionList = promotions.filter((p) => p.status === "Archivée")
     </div>
   );
 
-function FakeQr({ value }) {
-  const cells = Array.from({ length: 81 }, (_, i) => {
-    const seed = (value + i)
-      .split("")
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return seed % 2 === 0;
-  });
+  function FakeQr({ value }) {
+    const cells = Array.from({ length: 81 }, (_, i) => {
+      const seed = (value + i)
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return seed % 2 === 0;
+    });
 
-  return (
-    <div
-      style={{
-        width: "120px",
-        height: "120px",
-        margin: "0 auto",
-        display: "grid",
-        gridTemplateColumns: "repeat(9, 1fr)",
-        gap: "2px",
-        background: "#fff",
-        padding: "8px",
-        borderRadius: "12px",
-        boxSizing: "border-box",
-      }}
-    >
-      {cells.map((filled, index) => (
-        <div
-          key={index}
-          style={{
-            background: filled ? "#111827" : "#ffffff",
-            border: "1px solid #e5e7eb",
-            width: "100%",
-            height: "100%",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function StatCard({ label, value }) {
-  return (
-    <div
-      style={{
-        background:
-          "linear-gradient(180deg, rgba(17,17,17,0.96), rgba(12,12,12,0.98))",
-        borderRadius: "22px",
-        padding: "22px",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-        border: "1px solid #2A2A2A",
-      }}
-    >
+    return (
       <div
         style={{
-          color: "#A89F8A",
-          fontSize: "12px",
-          marginBottom: "10px",
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          fontWeight: 800,
+          width: "120px",
+          height: "120px",
+          margin: "0 auto",
+          display: "grid",
+          gridTemplateColumns: "repeat(9, 1fr)",
+          gap: "2px",
+          background: "#fff",
+          padding: "8px",
+          borderRadius: "12px",
+          boxSizing: "border-box",
         }}
       >
-        {label}
+        {cells.map((filled, index) => (
+          <div
+            key={index}
+            style={{
+              background: filled ? "#111827" : "#ffffff",
+              border: "1px solid #e5e7eb",
+              width: "100%",
+              height: "100%",
+            }}
+          />
+        ))}
       </div>
-      <div style={{ fontSize: "34px", fontWeight: 900, color: "#F2D06B" }}>
-        {value}
+    );
+  }
+
+  function StatCard({ label, value }) {
+    return (
+      <div
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(17,17,17,0.96), rgba(12,12,12,0.98))",
+          borderRadius: "22px",
+          padding: "22px",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+          border: "1px solid #2A2A2A",
+        }}
+      >
+        <div
+          style={{
+            color: "#A89F8A",
+            fontSize: "12px",
+            marginBottom: "10px",
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            fontWeight: 800,
+          }}
+        >
+          {label}
+        </div>
+        <div style={{ fontSize: "34px", fontWeight: 900, color: "#F2D06B" }}>
+          {value}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 }

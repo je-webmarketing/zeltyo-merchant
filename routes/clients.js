@@ -94,8 +94,11 @@ router.post("/visit", async (req, res) => {
 
     const clients = await getAllClients();
     const index = clients.findIndex(
-      (c) => c.id === id || (phone && c.phone === phone)
-    );
+  (c) =>
+    c.id === id ||
+    c.loyaltyId === id ||
+    (phone && c.phone === phone)
+);
 
     if (index === -1) {
       return res.status(404).json({
@@ -117,8 +120,11 @@ router.post("/visit", async (req, res) => {
     const refreshed = await refreshClientSegments();
 
     const updatedClient = refreshed.find(
-      (c) => c.id === id || (phone && c.phone === phone)
-    );
+  (c) =>
+    c.id === id ||
+    c.loyaltyId === id ||
+    (phone && c.phone === phone)
+);
 
     if (updatedClient?.subscriptionId) {
       let message = null;

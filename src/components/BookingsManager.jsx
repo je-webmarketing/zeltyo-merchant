@@ -1,19 +1,31 @@
-import { useEffect, useState } from "react";
-import { buildApiUrl } from "../config/api";
+import { useEffect, useMemo, useState } from "react";
+import { buildApiUrl } from "../../config/api";
 
 export default function BookingsManager({ selectedBusiness }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [updatingId, setUpdatingId] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [responses, setResponses] = useState({});
+
+  const businessId = useMemo(
+    () => selectedBusiness?.id || selectedBusiness?._id || "",
+    [selectedBusiness]
+  );
 
   const loadBookings = async () => {
     try {
-      if (!selectedBusiness?.id) return;
+      setErrorMessage("");
+
+      if (!businessId) {
+        setBookings([]);
+        return;
+      }
 
       setLoading(true);
 
       const response = await fetch(
-        buildApiUrl(`/bookings/by-business/${selectedBusiness.id}`)
+        buildApiUrl(`/bookings/by-business/${businessId}`)
       );
 
       const data = await response.json();
@@ -22,20 +34,24 @@ export default function BookingsManager({ selectedBusiness }) {
         throw new Error(data.error || "Erreur chargement réservations");
       }
 
-      setBookings(data.bookings || []);
-      console.log("bookings chargées =", data.bookings);
+      setBookings(Array.isArray(data.bookings) ? data.bookings : []);
     } catch (error) {
       console.error("Erreur chargement réservations :", error);
+      setErrorMessage(error.message || "Impossible de charger les réservations.");
+      setBookings([]);
     } finally {
       setLoading(false);
     }
   };
 
   const updateBooking = async (bookingId, status, extra = {}) => {
-  try {
-    const response = await fetch(
-      buildApiUrl(`/bookings/${bookingId}/status`),
-      {
+    try {
+      if (!bookingId) return;
+
+      setUpdatingId(bookingId);
+      setErrorMessage("");
+
+      const response = await fetch(buildApiUrl(`/bookings/${bookingId}/status`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -44,196 +60,219 @@ export default function BookingsManager({ selectedBusiness }) {
           proposedDate: extra.date || "",
           proposedTime: extra.time || "",
         }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Erreur mise à jour réservation");
       }
-    );
 
-    const data = await response.json();
+      setResponses((prev) => ({
+        ...prev,
+        [bookingId]: { message: "", date: "", time: "" },
+      }));
 
-    if (!response.ok || !data.ok) {
-      throw new Error(data.error || "Erreur mise à jour réservation");
+      await loadBookings();
+    } catch (error) {
+      console.error("Erreur update réservation :", error);
+      setErrorMessage(error.message || "Erreur mise à jour réservation");
+    } finally {
+      setUpdatingId("");
     }
-
-    await loadBookings();
-  } catch (error) {
-    console.error("Erreur update réservation :", error);
-    alert(error.message || "Erreur mise à jour réservation");
-  }
-};
+  };
 
   useEffect(() => {
     loadBookings();
-  }, [selectedBusiness?.id]);
+  }, [businessId]);
 
   return (
-    <div
-      style={{
-        background: "#111111",
-        border: "1px solid #2A2A2A",
-        borderRadius: 22,
-        padding: 18,
-        marginBottom: 18,
-      }}
-    >
+    <div style={wrapperStyle()}>
       <h3 style={{ color: "#F2D06B", marginTop: 0 }}>
         Demandes de réservation
       </h3>
 
-      {loading ? (
+      {errorMessage && <div style={errorStyle()}>{errorMessage}</div>}
+
+      {!businessId ? (
+        <p style={{ color: "#CFC7B0" }}>Aucun commerce sélectionné.</p>
+      ) : loading ? (
         <p style={{ color: "#CFC7B0" }}>Chargement...</p>
       ) : bookings.length === 0 ? (
         <p style={{ color: "#CFC7B0" }}>Aucune réservation pour le moment.</p>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {bookings.map((booking) => {
+            const bookingId = booking.id || booking._id;
+            const isUpdating = updatingId === bookingId;
+            const isPending = booking.status === "pending";
+
             const statusLabel =
-              booking.status === "pending"
-                ? "En attente"
-                : booking.status === "confirmed"
+              booking.status === "confirmed"
                 ? "Confirmée"
                 : booking.status === "cancelled"
                 ? "Refusée"
-                : booking.status;
+                : "En attente";
+
+            const statusColor =
+              booking.status === "confirmed"
+                ? "#22c55e"
+                : booking.status === "cancelled"
+                ? "#ef4444"
+                : "#F2A65A";
+
+            const typeLabel =
+              booking.type === "pickup"
+                ? "À emporter"
+                : booking.type === "delivery"
+                ? "Livraison"
+                : "Réservation sur place";
 
             return (
-              <div
-                key={booking.id}
-                style={{
-                  border: "1px solid #2A2A2A",
-                  borderRadius: 16,
-                  padding: 14,
-                  background: "#161616",
-                }}
-              >
-                <div style={{ color: "#F7F4EA", fontWeight: 800 }}>
-                  {booking.clientName}
+              <div key={bookingId} style={cardStyle()}>
+                <div style={{ color: "#F7F4EA", fontWeight: 900 }}>
+                  {booking.clientName || "Client"}
                 </div>
 
                 <div style={{ color: "#CFC7B0", marginTop: 6 }}>
-                  {booking.clientPhone}
+                  {booking.clientPhone || "Téléphone non renseigné"}
+                </div>
+
+                <div style={{ color: "#F2D06B", marginTop: 8, fontWeight: 800 }}>
+                  {typeLabel}
                 </div>
 
                 <div style={{ color: "#CFC7B0", marginTop: 6 }}>
-                  {booking.date} à {booking.time}
+                  {booking.date || "-"} à {booking.time || "-"}
                 </div>
 
-                <div style={{ color: "#CFC7B0", marginTop: 6 }}>
-                  {booking.partySize} personne(s) • {booking.area}
-                </div>
-
-                {booking.note ? (
+                {booking.type === "reservation" && (
                   <div style={{ color: "#CFC7B0", marginTop: 6 }}>
+                    {booking.partySize || 1} personne(s) •{" "}
+                    {booking.area || "zone non précisée"}
+                  </div>
+                )}
+
+                {booking.note && (
+                  <div style={{ color: "#CFC7B0", marginTop: 8 }}>
                     Note : {booking.note}
                   </div>
+                )}
+
+                {isPending ? (
+                  <>
+                    <textarea
+                      placeholder="Réponse au client..."
+                      value={responses[bookingId]?.message || ""}
+                      onChange={(e) =>
+                        setResponses((prev) => ({
+                          ...prev,
+                          [bookingId]: {
+                            ...prev[bookingId],
+                            message: e.target.value,
+                          },
+                        }))
+                      }
+                      style={textareaStyle()}
+                    />
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 10,
+                        marginTop: 10,
+                      }}
+                    >
+                      <input
+                        type="date"
+                        value={responses[bookingId]?.date || ""}
+                        onChange={(e) =>
+                          setResponses((prev) => ({
+                            ...prev,
+                            [bookingId]: {
+                              ...prev[bookingId],
+                              date: e.target.value,
+                            },
+                          }))
+                        }
+                        style={inputMiniStyle()}
+                      />
+
+                      <input
+                        type="time"
+                        value={responses[bookingId]?.time || ""}
+                        onChange={(e) =>
+                          setResponses((prev) => ({
+                            ...prev,
+                            [bookingId]: {
+                              ...prev[bookingId],
+                              time: e.target.value,
+                            },
+                          }))
+                        }
+                        style={inputMiniStyle()}
+                      />
+                    </div>
+                  </>
                 ) : null}
-
-                <textarea
-  placeholder="Réponse au client..."
-  value={responses[booking.id]?.message || ""}
-  onChange={(e) =>
-    setResponses((prev) => ({
-      ...prev,
-      [booking.id]: {
-        ...prev[booking.id],
-        message: e.target.value,
-      },
-    }))
-  }
-  style={{
-    width: "100%",
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 10,
-    background: "#0d0d0d",
-    border: "1px solid #2A2A2A",
-    color: "#F7F4EA",
-    resize: "vertical",
-    minHeight: 80,
-    boxSizing: "border-box",
-  }}
-/>
-
-<div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10,
-    marginTop: 10,
-  }}
->
-  <input
-    type="date"
-    value={responses[booking.id]?.date || ""}
-    onChange={(e) =>
-      setResponses((prev) => ({
-        ...prev,
-        [booking.id]: {
-          ...prev[booking.id],
-          date: e.target.value,
-        },
-      }))
-    }
-    style={inputMiniStyle()}
-  />
-
-  <input
-    type="time"
-    value={responses[booking.id]?.time || ""}
-    onChange={(e) =>
-      setResponses((prev) => ({
-        ...prev,
-        [booking.id]: {
-          ...prev[booking.id],
-          time: e.target.value,
-        },
-      }))
-    }
-    style={inputMiniStyle()}
-  />
-</div>
 
                 <div
                   style={{
-                    color:
-                      booking.status === "pending"
-                        ? "#F2A65A"
-                        : booking.status === "confirmed"
-                        ? "#22c55e"
-                        : booking.status === "cancelled"
-                        ? "#ef4444"
-                        : "#F2A65A",
-                    marginTop: 8,
-                    fontWeight: 700,
+                    color: statusColor,
+                    marginTop: 12,
+                    fontWeight: 900,
                   }}
                 >
                   Statut : {statusLabel}
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    flexWrap: "wrap",
-                    marginTop: 12,
-                  }}
-                >
-                  <button
-  onClick={() =>
-    updateBooking(booking.id, "confirmed", responses[booking.id])
-  }
-  style={buttonStyle()}
->
-  Accepter
-</button>
+                {booking.merchantResponse && (
+                  <div style={{ color: "#CFC7B0", marginTop: 8 }}>
+                    Réponse envoyée :{" "}
+                    <strong style={{ color: "#F7F4EA" }}>
+                      {booking.merchantResponse}
+                    </strong>
+                  </div>
+                )}
 
-<button
-  onClick={() =>
-    updateBooking(booking.id, "cancelled", responses[booking.id])
-  }
-  style={buttonStyleDark()}
->
-  Refuser
-</button>
-                </div>
+                {booking.proposedDate || booking.proposedTime ? (
+                  <div style={{ color: "#CFC7B0", marginTop: 8 }}>
+                    Créneau proposé :{" "}
+                    <strong style={{ color: "#F7F4EA" }}>
+                      {booking.proposedDate || "-"}{" "}
+                      {booking.proposedTime ? `à ${booking.proposedTime}` : ""}
+                    </strong>
+                  </div>
+                ) : null}
+
+                {isPending ? (
+                  <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+                    <button
+                      disabled={isUpdating}
+                      onClick={() =>
+                        updateBooking(bookingId, "confirmed", responses[bookingId])
+                      }
+                      style={buttonStyle(isUpdating)}
+                    >
+                      {isUpdating ? "Mise à jour..." : "Accepter"}
+                    </button>
+
+                    <button
+                      disabled={isUpdating}
+                      onClick={() =>
+                        updateBooking(bookingId, "cancelled", responses[bookingId])
+                      }
+                      style={buttonStyleDark(isUpdating)}
+                    >
+                      Refuser
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ color: "#CFC7B0", marginTop: 12, fontWeight: 700 }}>
+                    Réponse déjà envoyée au client.
+                  </div>
+                )}
               </div>
             );
           })}
@@ -243,26 +282,72 @@ export default function BookingsManager({ selectedBusiness }) {
   );
 }
 
-function buttonStyle() {
+function wrapperStyle() {
   return {
-    background: "linear-gradient(135deg, #D97A32, #F2A65A)",
-    color: "#111111",
+    background: "#111111",
+    border: "1px solid #2A2A2A",
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 18,
+  };
+}
+
+function cardStyle() {
+  return {
+    border: "1px solid #2A2A2A",
+    borderRadius: 16,
+    padding: 14,
+    background: "#161616",
+  };
+}
+
+function errorStyle() {
+  return {
+    background: "rgba(239,68,68,0.12)",
+    border: "1px solid rgba(239,68,68,0.35)",
+    color: "#fca5a5",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    fontWeight: 700,
+  };
+}
+
+function textareaStyle() {
+  return {
+    width: "100%",
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 10,
+    background: "#0d0d0d",
+    border: "1px solid #2A2A2A",
+    color: "#F7F4EA",
+    resize: "vertical",
+    minHeight: 80,
+    boxSizing: "border-box",
+  };
+}
+
+function buttonStyle(disabled = false) {
+  return {
+    background: disabled ? "#333" : "linear-gradient(135deg, #D97A32, #F2A65A)",
+    color: disabled ? "#999" : "#111111",
     border: "none",
     padding: "10px 14px",
     borderRadius: 12,
-    cursor: "pointer",
+    cursor: disabled ? "not-allowed" : "pointer",
     fontWeight: 800,
   };
 }
 
-function buttonStyleDark() {
+function buttonStyleDark(disabled = false) {
   return {
     background: "#1A1A1A",
-    color: "#F7F4EA",
+    color: disabled ? "#777" : "#F7F4EA",
     border: "1px solid #2A2A2A",
     padding: "10px 14px",
     borderRadius: 12,
-    cursor: "pointer",
+    cursor: disabled ? "not-allowed" : "pointer",
     fontWeight: 700,
   };
 }

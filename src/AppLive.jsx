@@ -534,7 +534,7 @@ function loadProgramSettings() {
   }
 
   try {
-   const response = await fetch("https://zeltyo-backend.onrender.com/clients/visit", {
+   const response = await fetch(buildApiUrl("/clients/visit"), {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -1069,7 +1069,7 @@ useEffect(() => {
 useEffect(() => {
   async function loadCustomersFromBackend() {
     try {
-      const response = await fetch("https://zeltyo-backend.onrender.com/clients");
+      const response = await fetch(buildApiUrl("/clients"));
       const data = await response.json();
 
       if (data.ok && Array.isArray(data.clients)) {

@@ -64,8 +64,6 @@ app.use(cors({
 
 
 app.use("/business", businessRoutes);
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 app.use(express.json());
 

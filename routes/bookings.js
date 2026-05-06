@@ -1,101 +1,60 @@
 import express from "express";
+import {
+  createBooking,
+  getBookingsByBusinessId,
+  getBookingsByClientId,
+  getBookingsByClientPhone,
+  updateBookingStatus,
+  purgeOldBookings,
+} from "../services/bookingStore.js";
 
 const router = express.Router();
 
-const bookings = [];
+router.get("/__debug", (req, res) => {
+  res.json({
+    ok: true,
+    message: "bookings router OK",
+    routes: ["/", "/purge/old", "/by-business/:id", "/by-client/:id", "/by-phone/:phone", "/:id/status"],
+  });
+});
 
-router.post("/", (req, res) => {
+router.get("/purge/old", async (req, res) => {
   try {
-    const booking = {
-      id: `BOOK-${Date.now()}`,
-      businessId: req.body.businessId || req.body.merchantId || "",
-      merchantId: req.body.merchantId || req.body.businessId || "",
-      businessName: req.body.businessName || "",
-      clientId: req.body.clientId || "",
-      clientName: req.body.clientName || "",
-      clientPhone: req.body.clientPhone || "",
-      type: req.body.type || "reservation",
-      area: req.body.area || "",
-      partySize: Number(req.body.partySize || 1),
-      date: req.body.date || "",
-      time: req.body.time || "",
-      deliveryAddress: req.body.deliveryAddress || "",
-      note: req.body.note || "",
-      items: Array.isArray(req.body.items) ? req.body.items : [],
-      totalPrice: Number(req.body.totalPrice || 0),
-      status: "pending",
-      merchantResponse: "",
-      proposedDate: "",
-      proposedTime: "",
-      createdAt: new Date().toISOString(),
-    };
-
-    bookings.unshift(booking);
-
-    console.log("✅ Réservation créée :", booking);
-
-    return res.json({
-      ok: true,
-      booking,
-    });
+    await purgeOldBookings();
+    res.json({ ok: true, message: "Purge réservations effectuée" });
   } catch (error) {
-    console.error("Erreur création réservation :", error);
-    return res.status(500).json({
-      ok: false,
-      error: "Erreur création réservation",
-    });
+    res.status(500).json({ ok: false, error: "Erreur purge réservations" });
   }
 });
 
-router.get("/by-business/:businessId", (req, res) => {
-  const businessId = req.params.businessId;
-
-  const filtered = bookings.filter(
-    (booking) =>
-      booking.businessId === businessId || booking.merchantId === businessId
-  );
-
-  return res.json({
-    ok: true,
-    bookings: filtered,
-  });
+router.post("/", async (req, res) => {
+  const booking = await createBooking(req.body);
+  res.status(201).json({ ok: true, message: "Réservation envoyée", booking });
 });
 
-router.get("/by-client/:clientId", (req, res) => {
-  const clientId = req.params.clientId;
-
-  const filtered = bookings.filter((booking) => booking.clientId === clientId);
-
-  return res.json({
-    ok: true,
-    bookings: filtered,
-  });
+router.get("/by-business/:id", async (req, res) => {
+  const bookings = await getBookingsByBusinessId(req.params.id);
+  res.json({ ok: true, bookings });
 });
 
-router.patch("/:bookingId/status", (req, res) => {
-  const bookingId = req.params.bookingId;
+router.get("/by-client/:id", async (req, res) => {
+  const bookings = await getBookingsByClientId(req.params.id);
+  res.json({ ok: true, bookings });
+});
 
-  const booking = bookings.find(
-    (item) => item.id === bookingId || item._id === bookingId
-  );
+router.get("/by-phone/:phone", async (req, res) => {
+  const bookings = await getBookingsByClientPhone(req.params.phone);
+  res.json({ ok: true, bookings });
+});
+
+router.patch("/:id/status", async (req, res) => {
+  const booking = await updateBookingStatus(req.params.id, req.body);
 
   if (!booking) {
-    return res.status(404).json({
-      ok: false,
-      error: "Réservation introuvable",
-    });
+    return res.status(404).json({ ok: false, error: "Réservation introuvable" });
   }
 
-  booking.status = req.body.status || booking.status;
-  booking.merchantResponse = req.body.merchantResponse || "";
-  booking.proposedDate = req.body.proposedDate || "";
-  booking.proposedTime = req.body.proposedTime || "";
-  booking.updatedAt = new Date().toISOString();
-
-  return res.json({
-    ok: true,
-    booking,
-  });
+  res.json({ ok: true, message: "Statut mis à jour", booking });
 });
 
 export default router;

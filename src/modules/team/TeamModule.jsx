@@ -1,6 +1,11 @@
 import React from "react";
 import JournalModule from "../journal/JournalModule";
 
+function formatHours(hours = 0) {
+  if (!hours) return "0 h";
+  return `${hours.toFixed(2)} h`;
+}
+
 export default function TeamModule({
   currentUser,
   newEmployee,
@@ -12,7 +17,12 @@ export default function TeamModule({
   endShift,
   getTodayShifts,
   totalByEmployee,
+  monthlyHoursByEmployee,
   activityLog,
+  archiveLog,
+  restoreLog,
+  purgeOldLogs,
+  formatDate,
   styles,
   COLORS,
   showNotification,
@@ -89,6 +99,8 @@ export default function TeamModule({
           ) : (
             employees.map((employee) => {
               const working = isWorking(employee.id);
+              const monthlyHours =
+                monthlyHoursByEmployee?.[employee.id] || 0;
 
               return (
                 <div key={employee.id} style={styles.promoCard}>
@@ -124,6 +136,11 @@ export default function TeamModule({
 
                   <div style={styles.kpiLine}>
                     Coût horaire : <strong>{employee.hourlyCost || 0} €</strong>
+                  </div>
+
+                  <div style={styles.kpiLine}>
+                    Total heures ce mois :{" "}
+                    <strong>{formatHours(monthlyHours)}</strong>
                   </div>
 
                   {working ? (
@@ -258,6 +275,10 @@ export default function TeamModule({
 
       <JournalModule
         activityLog={activityLog}
+        archiveLog={archiveLog}
+        restoreLog={restoreLog}
+        purgeOldLogs={purgeOldLogs}
+        formatDate={formatDate}
         styles={styles}
         showNotification={showNotification}
       />

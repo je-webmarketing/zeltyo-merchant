@@ -3,16 +3,20 @@ import { buildApiUrl } from "../../config/api";
 
 export default function BookingsManager({ selectedBusiness }) {
   const [bookings, setBookings] = useState([]);
+  const [viewMode, setViewMode] = useState("active"); // active | archived
   const [loading, setLoading] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [responses, setResponses] = useState({});
+  const [activeCount, setActiveCount] = useState(0);
+const [archivedCount, setArchivedCount] = useState(0);
 
   const businessId = useMemo(
     () => selectedBusiness?.id || selectedBusiness?._id || "",
     [selectedBusiness]
   );
 
+  
   const loadBookings = async () => {
     try {
       setErrorMessage("");
@@ -24,17 +28,35 @@ export default function BookingsManager({ selectedBusiness }) {
 
       setLoading(true);
 
-      const response = await fetch(
-        buildApiUrl(`/bookings/by-business/${businessId}`)
+      const [activeResponse, archivedResponse] = await Promise.all([
+  fetch(buildApiUrl(`/bookings/by-business/${businessId}`)),
+  fetch(buildApiUrl(`/bookings/archived/${businessId}`)),
+]);
+
+const activeData = await activeResponse.json();
+const archivedData = await archivedResponse.json();
+
+const activeBookings = Array.isArray(activeData.bookings)
+  ? activeData.bookings
+  : [];
+
+const archivedBookings = Array.isArray(archivedData.bookings)
+  ? archivedData.bookings
+  : [];
+
+setActiveCount(activeBookings.length);
+setArchivedCount(archivedBookings.length);
+
+const list =
+  viewMode === "archived"
+    ? archivedBookings
+    : activeBookings;
+
+      setBookings(
+        viewMode === "archived"
+          ? list.filter((booking) => booking.archived === true)
+          : list.filter((booking) => booking.archived !== true)
       );
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "Erreur chargement réservations");
-      }
-
-      setBookings(Array.isArray(data.bookings) ? data.bookings : []);
     } catch (error) {
       console.error("Erreur chargement réservations :", error);
       setErrorMessage(error.message || "Impossible de charger les réservations.");
@@ -82,15 +104,65 @@ export default function BookingsManager({ selectedBusiness }) {
     }
   };
 
+  const restoreBooking = async (bookingId) => {
+    try {
+      if (!bookingId) return;
+
+      setUpdatingId(bookingId);
+      setErrorMessage("");
+
+      const response = await fetch(buildApiUrl(`/bookings/${bookingId}/restore`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Erreur restauration réservation");
+      }
+
+      await loadBookings();
+    } catch (error) {
+      console.error("Erreur restauration réservation :", error);
+      setErrorMessage(error.message || "Impossible de restaurer cette réservation.");
+    } finally {
+      setUpdatingId("");
+    }
+  };
+
   useEffect(() => {
+  loadBookings();
+
+  const interval = setInterval(() => {
     loadBookings();
-  }, [businessId]);
+  }, 30000);
+
+  return () => clearInterval(interval);
+}, [businessId, viewMode]);
 
   return (
     <div style={wrapperStyle()}>
-      <h3 style={{ color: "#F2D06B", marginTop: 0 }}>
-        Demandes de réservation
-      </h3>
+      <div style={headerStyle()}>
+        <h3 style={{ color: "#F2D06B", margin: 0 }}>
+          Demandes de réservation
+        </h3>
+
+        <div style={toggleWrapperStyle()}>
+          <button
+            onClick={() => setViewMode("active")}
+            style={toggleButtonStyle(viewMode === "active")}
+          >
+          Actives ({activeCount}) 
+          </button>
+          <button
+            onClick={() => setViewMode("archived")}
+            style={toggleButtonStyle(viewMode === "archived")}
+          >
+           Archives ({archivedCount})
+          </button>
+        </div>
+      </div>
 
       {errorMessage && <div style={errorStyle()}>{errorMessage}</div>}
 
@@ -99,7 +171,11 @@ export default function BookingsManager({ selectedBusiness }) {
       ) : loading ? (
         <p style={{ color: "#CFC7B0" }}>Chargement...</p>
       ) : bookings.length === 0 ? (
-        <p style={{ color: "#CFC7B0" }}>Aucune réservation pour le moment.</p>
+        <p style={{ color: "#CFC7B0" }}>
+          {viewMode === "archived"
+            ? "Aucune réservation archivée."
+            : "Aucune réservation active pour le moment."}
+        </p>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {bookings.map((booking) => {
@@ -112,6 +188,8 @@ export default function BookingsManager({ selectedBusiness }) {
                 ? "Confirmée"
                 : booking.status === "cancelled"
                 ? "Refusée"
+                : booking.status === "completed"
+                ? "Terminée"
                 : "En attente";
 
             const statusColor =
@@ -119,6 +197,8 @@ export default function BookingsManager({ selectedBusiness }) {
                 ? "#22c55e"
                 : booking.status === "cancelled"
                 ? "#ef4444"
+                : booking.status === "completed"
+                ? "#38bdf8"
                 : "#F2A65A";
 
             const typeLabel =
@@ -159,7 +239,7 @@ export default function BookingsManager({ selectedBusiness }) {
                   </div>
                 )}
 
-                {isPending ? (
+                {isPending && viewMode === "active" ? (
                   <>
                     <textarea
                       placeholder="Réponse au client..."
@@ -176,14 +256,7 @@ export default function BookingsManager({ selectedBusiness }) {
                       style={textareaStyle()}
                     />
 
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: 10,
-                        marginTop: 10,
-                      }}
-                    >
+                    <div style={dateGridStyle()}>
                       <input
                         type="date"
                         value={responses[bookingId]?.date || ""}
@@ -217,15 +290,38 @@ export default function BookingsManager({ selectedBusiness }) {
                   </>
                 ) : null}
 
-                <div
-                  style={{
-                    color: statusColor,
-                    marginTop: 12,
-                    fontWeight: 900,
-                  }}
-                >
-                  Statut : {statusLabel}
-                </div>
+               <div
+  style={{
+    marginTop: 14,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    background:
+      booking.status === "confirmed"
+        ? "rgba(34,197,94,0.15)"
+        : booking.status === "cancelled"
+        ? "rgba(239,68,68,0.15)"
+        : booking.status === "completed"
+        ? "rgba(56,189,248,0.15)"
+        : "rgba(242,166,90,0.15)",
+    color: statusColor,
+    border: `1px solid ${statusColor}30`,
+    borderRadius: 999,
+    padding: "8px 12px",
+    fontWeight: 800,
+    width: "fit-content",
+  }}
+>
+  <span
+    style={{
+      width: 8,
+      height: 8,
+      borderRadius: "50%",
+      background: statusColor,
+    }}
+  />
+  {statusLabel}
+</div>
 
                 {booking.merchantResponse && (
                   <div style={{ color: "#CFC7B0", marginTop: 8 }}>
@@ -246,7 +342,17 @@ export default function BookingsManager({ selectedBusiness }) {
                   </div>
                 ) : null}
 
-                {isPending ? (
+                {viewMode === "archived" ? (
+                  <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+                    <button
+                      disabled={isUpdating}
+                      onClick={() => restoreBooking(bookingId)}
+                      style={buttonStyle(isUpdating)}
+                    >
+                      {isUpdating ? "Restauration..." : "Restaurer"}
+                    </button>
+                  </div>
+                ) : isPending ? (
                   <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
                     <button
                       disabled={isUpdating}
@@ -268,11 +374,21 @@ export default function BookingsManager({ selectedBusiness }) {
                       Refuser
                     </button>
                   </div>
-                ) : (
-                  <div style={{ color: "#CFC7B0", marginTop: 12, fontWeight: 700 }}>
-                    Réponse déjà envoyée au client.
-                  </div>
-                )}
+                ) : booking.status === "confirmed" ? (
+  <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+    <button
+      disabled={isUpdating}
+      onClick={() => updateBooking(bookingId, "completed")}
+      style={buttonStyleDark(isUpdating)}
+    >
+      {isUpdating ? "Mise à jour..." : "Terminer"}
+    </button>
+  </div>
+) : (
+  <div style={{ color: "#CFC7B0", marginTop: 12, fontWeight: 700 }}>
+    Réponse déjà envoyée au client.
+  </div>
+)}
               </div>
             );
           })}
@@ -292,12 +408,49 @@ function wrapperStyle() {
   };
 }
 
+function headerStyle() {
+  return {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 14,
+    flexWrap: "wrap",
+  };
+}
+
+function toggleWrapperStyle() {
+  return {
+    display: "flex",
+    gap: 8,
+    background: "#0d0d0d",
+    padding: 4,
+    borderRadius: 14,
+    border: "1px solid #2A2A2A",
+  };
+}
+
+function toggleButtonStyle(active) {
+  return {
+    background: active ? "#F2D06B" : "transparent",
+    color: active ? "#111111" : "#CFC7B0",
+    border: "none",
+    padding: "8px 12px",
+    borderRadius: 10,
+    cursor: "pointer",
+    fontWeight: 800,
+  };
+}
+
 function cardStyle() {
   return {
     border: "1px solid #2A2A2A",
     borderRadius: 16,
     padding: 14,
     background: "#161616",
+    transition: "all 0.2s ease",
+    boxShadow: "0 0 0 rgba(0,0,0,0)",
+    cursor: "default",
   };
 }
 
@@ -325,6 +478,15 @@ function textareaStyle() {
     resize: "vertical",
     minHeight: 80,
     boxSizing: "border-box",
+  };
+}
+
+function dateGridStyle() {
+  return {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+    marginTop: 10,
   };
 }
 

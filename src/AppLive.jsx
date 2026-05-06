@@ -444,41 +444,87 @@ function loadProgramSettings() {
     setNotification("");
   }
 
-  function getNowLabel() {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, "0");
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const year = now.getFullYear();
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  function getNowISO() {
+  return new Date().toISOString();
+}
+
+function formatDate(value) {
+  if (!value) return "Date non disponible";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date non disponible";
   }
 
-  function addLog(action, detail) {
+  return date.toLocaleString("fr-FR");
+}
+
+function addLog(action, detail) {
   const logItem = {
     id: Date.now(),
     actor: currentUser.name,
     role: currentUser.role,
     action,
     detail,
-    date: getNowLabel(),
+    date: new Date().toISOString(),
+    archived: false,
+    archivedAt: null,
   };
 
- setActivityLog((prev) => {
-  const safePrev = Array.isArray(prev) ? prev : [];
-  return [logItem, ...safePrev].slice(0, 50);
-});
+  setActivityLog((prev) => {
+    const safePrev = Array.isArray(prev) ? prev : [];
+    return [logItem, ...safePrev].slice(0, 50);
+  });
 
   setEmployees((prev) =>
     prev.map((employee) =>
       employee.name === currentUser.name
-        ? {
-            ...employee,
-            lastAction: detail,
-          }
+        ? { ...employee, lastAction: detail }
         : employee
     )
   );
+}
+
+function archiveLog(logId) {
+  setActivityLog((prev) =>
+    prev.map((log) =>
+      log.id === logId
+        ? { ...log, archived: true, archivedAt: new Date().toISOString() }
+        : log
+    )
+  );
+
+  showNotification("Action archivée");
+}
+
+function restoreLog(logId) {
+  setActivityLog((prev) =>
+    prev.map((log) =>
+      log.id === logId
+        ? { ...log, archived: false, archivedAt: null }
+        : log
+    )
+  );
+
+  showNotification("Action restaurée");
+}
+
+function purgeOldLogs() {
+  const now = Date.now();
+
+  setActivityLog((prev) =>
+    prev.filter((log) => {
+      if (!log.archived) return true;
+
+      const archivedTime = new Date(log.archivedAt || log.date).getTime();
+      if (Number.isNaN(archivedTime)) return true;
+
+      return (now - archivedTime) / 86400000 <= 30;
+    })
+  );
+
+  showNotification("Purge du journal effectuée");
 }
 
   function showNotification(message) {
@@ -2053,6 +2099,25 @@ function restoreMenuItem(menuId) {
   showNotification("Produit restauré");
 }
 
+const currentMonth = new Date().toISOString().slice(0, 7);
+
+const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
+  if (!shift.end || !shift.start) return acc;
+
+  if (!shift.start.startsWith(currentMonth)) return acc;
+
+  const duration = new Date(shift.end) - new Date(shift.start);
+
+  if (duration <= 0 || Number.isNaN(duration)) return acc;
+
+  if (!acc[shift.employeeId]) {
+    acc[shift.employeeId] = 0;
+  }
+
+  acc[shift.employeeId] += duration / 3600000;
+
+  return acc;
+}, {});
 
   if (!isAuthenticated) {
     return (
@@ -2245,6 +2310,7 @@ function restoreMenuItem(menuId) {
     );
   }
 
+ 
   const currentTabLabel =
     TABS.find((tab) => tab.key === activeTab)?.label || "Tableau de bord";
 
@@ -2809,6 +2875,11 @@ function restoreMenuItem(menuId) {
     styles={styles}
     COLORS={COLORS}
     showNotification={showNotification}
+    archiveLog={archiveLog}
+restoreLog={restoreLog}
+purgeOldLogs={purgeOldLogs}
+formatDate={formatDate}
+monthlyHoursByEmployee={monthlyHoursByEmployee}
   />
 
 )}

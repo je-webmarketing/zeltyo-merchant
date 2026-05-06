@@ -2559,214 +2559,61 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
           </div>
         </div>
 
-        {activeTab === "dashboard" && (
-          <>
-            <div style={styles.grid5}>
-  <StatCard label="Clients actifs" value={totalClients} />
-  <StatCard label="Visites" value={totalVisits} />
-  <StatCard label="CA estimé" value={`${estimatedRevenue} €`} />
-  <StatCard label="Heures travaillées" value={`${totalWorkHours.toFixed(1)} h`} />
-  <StatCard label="Coût équipe" value={`${totalPayrollCost.toFixed(2)} €`} />
-  <StatCard label="Résultat estimé" value={`${profitEstimate.toFixed(2)} €`} />
-</div>
-
-<div style={styles.card}>
-  <h3 style={styles.cardTitle}>Alertes intelligentes</h3>
-
-  {businessAlerts.length === 0 ? (
-    <p style={styles.muted}>Aucune alerte pour le moment. Tout semble stable.</p>
-  ) : (
-    <div style={styles.tableLike}>
-      {businessAlerts.map((alert, index) => (
-        <div
-          key={`${alert.title}-${index}`}
-          style={{
-            ...styles.promoCard,
-            border:
-              alert.type === "danger"
-                ? "1px solid rgba(201,75,50,0.55)"
-                : alert.type === "success"
-                ? "1px solid rgba(34,197,94,0.45)"
-                : "1px solid rgba(217,122,50,0.45)",
-            background:
-              alert.type === "danger"
-                ? "rgba(201,75,50,0.12)"
-                : alert.type === "success"
-                ? "rgba(34,197,94,0.10)"
-                : "rgba(217,122,50,0.12)",
-          }}
-        >
-          <div style={{ fontWeight: 900, color: COLORS.goldLight }}>
-            {alert.type === "danger"
-              ? "🔴 "
-              : alert.type === "success"
-              ? "🟢 "
-              : "🟠 "}
-            {alert.title}
-          </div>
-
-          <div style={styles.muted}>{alert.message}</div>
-        </div>
-      ))}
+     {activeTab === "dashboard" && (
+  <>
+    <div style={styles.grid5}>
+      <StatCard label="Clients actifs" value={totalClients} />
+      <StatCard label="Visites" value={totalVisits} />
+      <StatCard label="Promos actives" value={activePromos} />
+      <StatCard label="Heures travaillées" value={`${totalWorkHours.toFixed(1)} h`} />
+      <StatCard label="Coût équipe" value={`${totalPayrollCost.toFixed(2)} €`} />
     </div>
-  )}
-</div>
 
-            <div style={styles.grid2}>
-  <div style={styles.card}>
-    <h3 style={styles.cardTitle}>Ajouter un client</h3>
-    <input
-      style={styles.input}
-      placeholder="Nom du client"
-      value={newCustomer.name}
-      onChange={(e) =>
-        setNewCustomer({ ...newCustomer, name: e.target.value })
-      }
-    />
-    <input
-      style={styles.input}
-      placeholder="Email"
-      value={newCustomer.email}
-      onChange={(e) =>
-        setNewCustomer({ ...newCustomer, email: e.target.value })
-      }
-    />
-    <input
-      style={styles.input}
-      placeholder="Téléphone"
-      value={newCustomer.phone}
-      onChange={(e) =>
-        setNewCustomer({ ...newCustomer, phone: e.target.value })
-      }
-    />
-    <button style={styles.buttonFull} onClick={addCustomer}>
-      Créer une carte fidélité
-    </button>
-    <p style={styles.helper}>
-      Cette action reste disponible pour l’équipe. L’administrateur
-      peut ensuite vérifier qui a ajouté chaque client dans l’onglet
-      de contrôle.
-    </p>
-  </div>
+    <div style={styles.card}>
+      <h3 style={styles.cardTitle}>Actions rapides</h3>
 
-  <h3>📅 Aujourd’hui</h3>
+      <div style={styles.grid3}>
+        <button style={styles.buttonFull} onClick={() => setActiveTab("clients")}>
+          Gérer les clients
+        </button>
 
-{getTodayShifts().map((s) => {
-  const emp = employees.find((e) => e.id === s.employeeId);
+        <button style={styles.buttonFull} onClick={() => setActiveTab("promos")}>
+          Créer une promotion
+        </button>
 
-  return (
-    <div key={s.id}>
-      {emp?.name} — {new Date(s.start).toLocaleTimeString()}
-      {" → "}
-      {s.end ? new Date(s.end).toLocaleTimeString() : "En service"}
+        <button style={styles.buttonFull} onClick={() => setActiveTab("team")}>
+          Contrôle équipe
+        </button>
+      </div>
     </div>
-  );
-})}
 
-  <div style={styles.card}>
-    <h3 style={styles.cardTitle}>Valider une visite</h3>
-   <select
-  style={styles.input}
-  value={scanId}
-  onChange={(e) => setScanId(e.target.value)}
->
-  {customers.map((customer) => (
-    <option key={customer.id} value={customer.id}>
-      {customer.name} — {customer.loyaltyId || customer.id}
-    </option>
-  ))}
-</select>
-    <button style={styles.buttonFull} onClick={rewardVisit}>
-      Ajouter 1 point après validation
-    </button>
-    <p style={styles.helper}>
-      L’employé peut gérer la fidélité en caisse. Chaque validation
-      continue de remonter automatiquement dans le journal
-      d’activité.
-    </p>
-  </div>
-</div>
+    <div style={styles.card}>
+      <h3 style={styles.cardTitle}>Alertes intelligentes</h3>
 
-<div style={{ marginBottom: "20px" }}>
-  <div style={styles.card}>
-    <h3 style={styles.cardTitle}>Demandes de réservation</h3>
-    <BookingsManager selectedBusiness={{ id: currentUser?.businessId || "BUS-DYNAMIC" }} />
-  </div>
-</div>
-
-            <div style={styles.grid3}>
-              <div style={styles.card}>
-                <h3 style={styles.sectionTitle}>Top clients fidélité</h3>
-                {topCustomers.map((customer) => (
-                  <div key={customer.id} style={styles.promoCard}>
-                    <div style={styles.rowBetween}>
-                      <strong>{customer.name}</strong>
-                      <span style={styles.badgeGreen}>{customer.tier}</span>
-                    </div>
-                    <div style={styles.kpiLine}>
-                      <div>
-                        Points : <strong>{customer.points}</strong>
-                      </div>
-                      <div>
-                        Visites : <strong>{customer.visits}</strong>
-                      </div>
-                      <div>
-                        Dernière visite : <strong>{customer.lastVisit}</strong>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+      {businessAlerts.length === 0 ? (
+        <p style={styles.muted}>Aucune alerte pour le moment. Tout semble stable.</p>
+      ) : (
+        <div style={styles.tableLike}>
+          {businessAlerts.slice(0, 3).map((alert, index) => (
+            <div key={`${alert.title}-${index}`} style={styles.promoCard}>
+              <div style={{ fontWeight: 900, color: COLORS.goldLight }}>
+                {alert.title}
               </div>
-
-              <div style={styles.card}>
-                <h3 style={styles.cardTitle}>🔥 Clients à relancer</h3>
-                {clientsToRelance.length === 0 && (
-                  <p style={styles.muted}>
-                    Aucun client à relancer pour le moment
-                  </p>
-                )}
-                {clientsToRelance.map((customer) => (
-                  <div key={customer.id} style={styles.promoCard}>
-                    <div style={styles.rowBetween}>
-                      <strong>{customer.name}</strong>
-                      <span style={styles.badgeOrange}>
-                        {rewardGoal - (customer.points % rewardGoal || rewardGoal)}{" "}
-                        point(s)
-                      </span>
-                    </div>
-                    <button
-                      style={styles.buttonWhatsapp}
-                      onClick={() => openWhatsApp(customer)}
-                    >
-                      Relancer via WhatsApp
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <div style={styles.card}>
-                <h3 style={styles.cardTitle}>⏳ Clients inactifs</h3>
-                {inactiveClients.length === 0 && (
-                  <p style={styles.muted}>Aucun client inactif</p>
-                )}
-                {inactiveClients.map((customer) => (
-                  <div key={customer.id} style={styles.promoCard}>
-                    <div style={styles.rowBetween}>
-                      <strong>{customer.name}</strong>
-                      <span style={styles.badge}>Inactif</span>
-                    </div>
-                    <button
-                      style={styles.buttonWhatsapp}
-                      onClick={() => openWhatsApp(customer)}
-                    >
-                      Relancer client inactif
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <div style={styles.muted}>{alert.message}</div>
             </div>
-          </>
-        )}
+          ))}
+        </div>
+      )}
+    </div>
+
+    <div style={styles.card}>
+      <h3 style={styles.cardTitle}>Demandes de réservation</h3>
+      <BookingsManager
+        selectedBusiness={{ id: currentUser?.businessId || "BUS-DYNAMIC" }}
+      />
+    </div>
+  </>
+)}
 
        {activeTab === "clients" && (
   <ClientsModule

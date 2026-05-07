@@ -2464,7 +2464,7 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
             <div style={styles.quickRow}>
               <button
                 style={styles.quickButton}
-                onClick={() => setActiveTab("dashboard")}
+                onClick={() => setActiveTab("clients")}
               >
                 Ajouter un client
               </button>
@@ -2559,7 +2559,7 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
           </div>
         </div>
 
-     {activeTab === "dashboard" && (
+    {activeTab === "dashboard" && (
   <>
     <div style={styles.grid5}>
       <StatCard label="Clients actifs" value={totalClients} />
@@ -2617,17 +2617,31 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
 
        {activeTab === "clients" && (
   <ClientsModule
-    filteredCustomers={filteredCustomers}
-    search={search}
-    setSearch={setSearch}
-    styles={styles}
-    COLORS={COLORS}
-    generateMessage={generateMessage}
-    useReward={useReward}
-    openWhatsApp={openWhatsApp}
-    addLog={addLog}
-    showNotification={showNotification}
-  />
+  filteredCustomers={filteredCustomers}
+  search={search}
+  setSearch={setSearch}
+  styles={styles}
+  COLORS={COLORS}
+  generateMessage={generateMessage}
+  useReward={useReward}
+  openWhatsApp={openWhatsApp}
+  addLog={addLog}
+  showNotification={showNotification}
+
+  newCustomer={newCustomer}
+  setNewCustomer={setNewCustomer}
+  addCustomer={addCustomer}
+
+  scanId={scanId}
+  setScanId={setScanId}
+  customers={customers}
+  rewardVisit={rewardVisit}
+
+  topCustomers={topCustomers}
+  clientsToRelance={clientsToRelance}
+  inactiveClients={inactiveClients}
+  rewardGoal={rewardGoal}
+/>
 )}
 
 {activeTab === "onboarding" && (

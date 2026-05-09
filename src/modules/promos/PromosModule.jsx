@@ -15,6 +15,39 @@ export default function PromosModule({
   archivePromotion,
   styles,
 }) {
+
+  function copyText(text, label = "Message copié") {
+  navigator.clipboard.writeText(text);
+  alert(label);
+}
+
+function buildChannelMessage(channel) {
+  const title = promo.title || "Votre offre fidélité";
+  const desc =
+    promo.description ||
+    "Découvrez notre offre du moment et profitez de votre programme fidélité.";
+  const code = promo.code || "PROMO10";
+  const cta = promo.ctaUrl ? `\n👉 ${promo.ctaUrl}` : "";
+
+  if (channel === "WhatsApp") {
+    return `🎁 ${title}\n\n${desc}\n\nCode : ${code}${cta}`;
+  }
+
+  if (channel === "Facebook") {
+    return `🎁 ${title}\n\n${desc}\n\nPrésentez votre carte fidélité et utilisez le code : ${code}${cta}`;
+  }
+
+  if (channel === "Instagram") {
+    return `🎁 ${title}\n\n${desc}\n\nCode : ${code}\n#offre #fidélité #commerceLocal${cta}`;
+  }
+
+  if (channel === "Email") {
+    return `Bonjour,\n\n${title}\n\n${desc}\n\nCode promotionnel : ${code}${cta}\n\nÀ très bientôt.`;
+  }
+
+  return socialPreview;
+}
+
   return (
     <div style={styles.grid2}>
       <div style={{ ...styles.card, gridColumn: "1 / -1" }}>
@@ -80,6 +113,36 @@ export default function PromosModule({
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>Aperçu du message</h3>
         <div style={styles.previewBox}>
+<div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "14px" }}>
+  <button
+    style={styles.buttonGhost}
+    onClick={() => copyText(buildChannelMessage("Instagram"), "Texte Instagram copié")}
+  >
+    Copier Instagram
+  </button>
+
+  <button
+    style={styles.buttonGhost}
+    onClick={() => copyText(buildChannelMessage("Facebook"), "Texte Facebook copié")}
+  >
+    Copier Facebook
+  </button>
+
+  <button
+    style={styles.buttonGhost}
+    onClick={() => copyText(buildChannelMessage("WhatsApp"), "Texte WhatsApp copié")}
+  >
+    Copier WhatsApp
+  </button>
+
+  <button
+    style={styles.buttonGhost}
+    onClick={() => copyText(buildChannelMessage("Email"), "Email copié")}
+  >
+    Copier Email
+  </button>
+</div>
+
           <div style={{ whiteSpace: "pre-line", lineHeight: 1.7 }}>
             {socialPreview}
           </div>

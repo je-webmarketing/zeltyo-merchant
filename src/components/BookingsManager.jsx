@@ -4,10 +4,11 @@ import { buildApiUrl } from "../../config/api";
 export default function BookingsManager({ selectedBusiness }) {
   const [bookings, setBookings] = useState([]);
   const [viewMode, setViewMode] = useState("active"); // active | archived
-  const [loading, setLoading] = useState(false);
+   const [loading, setLoading] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [responses, setResponses] = useState({});
+  const [openProposalId, setOpenProposalId] = useState("");
   const [activeCount, setActiveCount] = useState(0);
 const [archivedCount, setArchivedCount] = useState(0);
 
@@ -103,6 +104,12 @@ const list =
       setUpdatingId("");
     }
   };
+
+  const handleProposeSlot = async (bookingId) => {
+  await updateBooking(bookingId, "confirmed", responses[bookingId]);
+
+  setOpenProposalId("");
+};
 
   const restoreBooking = async (bookingId) => {
     try {
@@ -343,7 +350,15 @@ const list =
                 ) : null}
 
                 {viewMode === "archived" ? (
-                  <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+                  <div
+  style={{
+    display: "flex",
+    gap: 10,
+    marginTop: 12,
+    alignItems: "center",
+    flexWrap: "wrap",
+  }}
+>
                     <button
                       disabled={isUpdating}
                       onClick={() => restoreBooking(bookingId)}
@@ -353,7 +368,15 @@ const list =
                     </button>
                   </div>
                 ) : isPending ? (
-                  <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+  <div
+    style={{
+      display: "flex",
+      gap: 10,
+      marginTop: 12,
+      alignItems: "center",
+      flexWrap: "wrap",
+    }}
+  >
                     <button
                       disabled={isUpdating}
                       onClick={() =>
@@ -373,6 +396,43 @@ const list =
                     >
                       Refuser
                     </button>
+
+<div
+  style={{
+    width: "100%",
+    marginTop: 14,
+    paddingTop: 14,
+    borderTop: "1px solid #2A2A2A",
+  }}
+>
+  {openProposalId === bookingId ? (
+    <>
+      <button
+        disabled={isUpdating}
+        onClick={() => handleProposeSlot(bookingId)}
+        style={buttonStyle(isUpdating)}
+      >
+        📅 Envoyer la proposition
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setOpenProposalId("")}
+        style={buttonStyleDark(false)}
+      >
+        Annuler
+      </button>
+    </>
+  ) : (
+    <button
+      type="button"
+      onClick={() => setOpenProposalId(bookingId)}
+      style={buttonStyleDark(false)}
+    >
+      📅 Proposer un autre créneau
+    </button>
+  )}
+</div>
                   </div>
                 ) : booking.status === "confirmed" ? (
   <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
@@ -495,10 +555,16 @@ function buttonStyle(disabled = false) {
     background: disabled ? "#333" : "linear-gradient(135deg, #D97A32, #F2A65A)",
     color: disabled ? "#999" : "#111111",
     border: "none",
-    padding: "10px 14px",
+    padding: "10px 18px",
+    minHeight: 44,
+    width: "auto",
     borderRadius: 12,
     cursor: disabled ? "not-allowed" : "pointer",
     fontWeight: 800,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flex: "0 0 auto",
   };
 }
 
@@ -507,10 +573,16 @@ function buttonStyleDark(disabled = false) {
     background: "#1A1A1A",
     color: disabled ? "#777" : "#F7F4EA",
     border: "1px solid #2A2A2A",
-    padding: "10px 14px",
+    padding: "10px 18px",
+    minHeight: 44,
+    width: "auto",
     borderRadius: 12,
     cursor: disabled ? "not-allowed" : "pointer",
     fontWeight: 700,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flex: "0 0 auto",
   };
 }
 

@@ -636,6 +636,16 @@ function purgeOldLogs() {
     showNotification(`Récompense utilisée pour ${customerFound.name}`);
   }
 
+  function getNowLabel() {
+  return new Date().toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
   function addPromotion() {
     if (currentUser.role !== "admin") {
       showNotification("Seul l’administrateur peut créer une promotion");
@@ -658,6 +668,18 @@ ctaUrl: promo.ctaUrl,
     };
 
     setPromotions([newPromo, ...promotions]);
+
+    await fetch(buildApiUrl("/promotions"), {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    ...newPromo,
+    businessId: currentUser.businessId || "BUS-2",
+  }),
+});
+
     setPromo({
       title: "",
       code: "",
@@ -1113,18 +1135,29 @@ useEffect(() => {
 }, [isAuthenticated, menuItems]);
 
 useEffect(() => {
-  async function loadCustomersFromBackend() {
-    try {
-      const response = await fetch(buildApiUrl("/clients"));
-      const data = await response.json();
+ async function loadCustomersFromBackend() {
+  try {
+    const rawAuth = localStorage.getItem(STORAGE_AUTH);
+    const token = rawAuth ? JSON.parse(rawAuth)?.token : "";
 
-      if (data.ok && Array.isArray(data.clients)) {
-        setCustomers(data.clients);
-      }
-    } catch (error) {
-      console.error("Erreur chargement clients backend :", error);
+    console.log("STORAGE_AUTH =", STORAGE_AUTH);
+console.log("TOKEN CLIENTS =", token);
+
+    const response = await fetch(buildApiUrl("/clients"), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (data.ok && Array.isArray(data.clients)) {
+      setCustomers(data.clients);
     }
+  } catch (error) {
+    console.error("Erreur chargement clients backend :", error);
   }
+}
 
   loadCustomersFromBackend();
 }, []);

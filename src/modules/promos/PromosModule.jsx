@@ -101,9 +101,13 @@ function buildChannelMessage(channel) {
 
         <textarea style={styles.textarea} placeholder="Description claire et orientée bénéfice" value={promo.description} onChange={(e) => setPromo({ ...promo, description: e.target.value })} disabled={currentUser.role !== "admin"} />
 
-        <button style={styles.buttonFull} onClick={addPromotion}>
-          Publier la promotion
-        </button>
+        <button
+  style={styles.buttonFull}
+  onClick={addPromotion}
+  disabled={!["admin", "merchant_admin"].includes(currentUser.role)}
+>
+  Publier la promotion
+</button>
 
         <p style={styles.helper}>
           Le commerçant reste autonome pour gérer ses promotions. L’administrateur conserve le contrôle sur la création, la mise en pause et le suivi de chaque offre.

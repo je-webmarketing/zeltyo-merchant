@@ -308,12 +308,15 @@ const [employees, setEmployees] = useState([
   }
 
   function addPromotion() {
-    if (currentUser.role !== "admin") {
+    if (!["admin", "merchant_admin"].includes(currentUser.role)) {
       showNotification("Seul l’administrateur peut créer une promotion");
       return;
     }
 
-    if (!promo.title.trim() || !promo.description.trim()) return;
+    if (!promo.title.trim() || !promo.description.trim()) {
+  showNotification("Titre et description obligatoires");
+  return;
+}
 
     const newPromo = {
       id: Date.now(),

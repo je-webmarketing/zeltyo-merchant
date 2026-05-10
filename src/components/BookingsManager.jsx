@@ -17,6 +17,9 @@ const [archivedCount, setArchivedCount] = useState(0);
     [selectedBusiness]
   );
 
+const rawAuth = localStorage.getItem("zeltyo_merchant_auth");
+const auth = rawAuth ? JSON.parse(rawAuth) : null;
+const token = auth?.token || "";
   
   const loadBookings = async () => {
     try {
@@ -30,8 +33,16 @@ const [archivedCount, setArchivedCount] = useState(0);
       setLoading(true);
 
       const [activeResponse, archivedResponse] = await Promise.all([
-  fetch(buildApiUrl(`/bookings/by-business/${businessId}`)),
-  fetch(buildApiUrl(`/bookings/archived/${businessId}`)),
+  fetch(buildApiUrl(`/bookings/by-business/${businessId}`), {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+}),
+ fetch(buildApiUrl(`/bookings/archived/${businessId}`), {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+}),
 ]);
 
 const activeData = await activeResponse.json();
@@ -76,13 +87,16 @@ const list =
 
       const response = await fetch(buildApiUrl(`/bookings/${bookingId}/status`), {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status,
-          merchantResponse: extra.message || "",
-          proposedDate: extra.date || "",
-          proposedTime: extra.time || "",
-        }),
+       headers: {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${token}`,
+},
+body: JSON.stringify({
+  status,
+  merchantResponse: extra.message || "",
+  proposedDate: extra.date || "",
+  proposedTime: extra.time || "",
+}),
       });
 
       const data = await response.json();
@@ -120,7 +134,10 @@ const list =
 
       const response = await fetch(buildApiUrl(`/bookings/${bookingId}/restore`), {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+       headers: {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${token}`,
+},
       });
 
       const data = await response.json();

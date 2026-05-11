@@ -646,8 +646,8 @@ function purgeOldLogs() {
   });
 }
 
-  function addPromotion() {
-    if (currentUser.role !== "admin") {
+  async function addPromotion() {
+    if (!["admin", "merchant_admin"].includes(currentUser.role)) {
       showNotification("Seul l’administrateur peut créer une promotion");
       return;
     }
@@ -820,37 +820,43 @@ function archiveMenuItem(menuId) {
   }
 
  
-  function togglePromotionStatus(promoId) {
-    if (currentUser.role !== "admin") {
-      showNotification("Seul l’administrateur peut modifier une promotion");
-      return;
-    }
-
-    const targetPromo = promotions.find((p) => p.id === promoId);
-    if (!targetPromo) return;
-
-    setPromotions((prev) =>
-      prev.map((p) =>
-        p.id === promoId
-          ? {
-              ...p,
-              status: p.status === "Active" ? "Pause" : "Active",
-            }
-          : p
-      )
-    );
-
-    addLog(
-      "A modifié une promotion",
-      `${targetPromo.title} → ${
-        targetPromo.status === "Active" ? "Pause" : "Active"
-      }`
-    );
-    showNotification("Statut de la promotion mis à jour");
+ async function togglePromotionStatus(promoId) {
+  if (!["admin", "merchant_admin"].includes(currentUser.role)) {
+    showNotification("Seul l’administrateur peut modifier une promotion");
+    return;
   }
 
-  function archivePromotion(promoId) {
-  if (currentUser.role !== "admin") {
+  const targetPromo = promotions.find((p) => p.id === promoId);
+  if (!targetPromo) return;
+
+  const nextStatus = targetPromo.status === "Active" ? "Pause" : "Active";
+
+  setPromotions((prev) =>
+    prev.map((p) =>
+      p.id === promoId
+        ? { ...p, status: nextStatus }
+        : p
+    )
+  );
+
+  await fetch(buildApiUrl(`/promotions/${promoId}/status`), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      status: nextStatus,
+    }),
+  });
+
+  addLog(
+    "A modifié une promotion",
+    `${targetPromo.title} → ${nextStatus}`
+  );
+
+  showNotification("Statut de la promotion mis à jour");
+}
+
+async function archivePromotion(promoId) {
+  if (!["admin", "merchant_admin"].includes(currentUser.role)) {
     showNotification("Seul l’administrateur peut archiver une promotion");
     return;
   }
@@ -869,6 +875,11 @@ function archiveMenuItem(menuId) {
         : p
     )
   );
+
+  await fetch(buildApiUrl(`/promotions/${promoId}/archive`), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+  });
 
   addLog("A archivé une promotion", `${targetPromo.title}`);
   showNotification("Promotion archivée");

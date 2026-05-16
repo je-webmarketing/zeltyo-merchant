@@ -1,5 +1,20 @@
 import { useMemo, useState, useEffect } from "react";
 import { buildApiUrl } from "./config/api";
+
+function authFetch(path, options = {}) {
+  const rawAuth = localStorage.getItem("zeltyo_merchant_auth");
+  const auth = rawAuth ? JSON.parse(rawAuth) : null;
+  const token = auth?.token || "";
+
+  return fetch(buildApiUrl(path), {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 import { QRCodeSVG } from "qrcode.react";
 import BookingsManager from "./components/BookingsManager";
 import MenuUploader from "./components/MenuUploader";
@@ -125,8 +140,8 @@ const [primaryColor, setPrimaryColor] = useState(
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginForm, setLoginForm] = useState({
-    email: "admin@moncommerce.ch",
-    password: "admin123",
+   email: "admin@barberclub.ch",
+password: "Zeltyo123!",
   });
 
   const [newCustomer, setNewCustomer] = useState({
@@ -538,7 +553,7 @@ function purgeOldLogs() {
     return "Bronze";
   }
 
- function addCustomer() {
+ async function addCustomer() {
   if (!newCustomer.name.trim()) {
     showNotification("Nom du client obligatoire");
     return;
@@ -559,9 +574,26 @@ function purgeOldLogs() {
     lastVisit: "Nouveau",
   };
 
+  const response = await authFetch("/clients", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify(customer),
+});
+
+const data = await response.json();
+
+if (!response.ok || !data.ok) {
+  showNotification(data.error || "Erreur création client backend");
+  return;
+}
+
+const savedCustomer = data.client || customer;
+
  setCustomers((prev) => {
   const safePrev = Array.isArray(prev) ? prev : [];
-  return [customer, ...safePrev];
+  return [savedCustomer, ...safePrev];
 });
 
   setNewCustomer({
@@ -573,23 +605,27 @@ function purgeOldLogs() {
   addLog("A ajouté un client", `${customer.name} (${customer.id})`);
   showNotification(`Client ajouté par ${currentUser.name}`);
 }
-  async function rewardVisit() {
+async function rewardVisit() {
+  console.log("REWARD VISIT VERSION V2");
   if (!scanId) {
     showNotification("Sélectionne un client");
     return;
   }
 
+  console.log("AUTH FETCH EXISTS =", typeof authFetch);
+console.log("TOKEN BEFORE VISIT =", JSON.parse(localStorage.getItem("zeltyo_merchant_auth"))?.token?.slice(0, 20));
+
   try {
-   const response = await fetch(buildApiUrl("/clients/visit"), {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    id: scanId,
-    points: 1,
-  }),
-});
+    const response = await authFetch("/clients/visit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: scanId,
+        points: 1,
+      }),
+    });
 
     const data = await response.json();
 
@@ -603,11 +639,7 @@ function purgeOldLogs() {
       localStorage.setItem("zeltyo_customers", JSON.stringify(data.clients));
     }
 
-    addLog(
-      "A validé une visite",
-      `${data.client?.name || "Client"} (${scanId})`
-    );
-
+    addLog("A validé une visite", `${data.client?.name || "Client"} (${scanId})`);
     showNotification(`+1 point ajouté pour ${data.client?.name || "le client"}`);
   } catch (error) {
     console.error("Erreur validation visite :", error);
@@ -615,7 +647,33 @@ function purgeOldLogs() {
   }
 }
 
-  function useReward(customerId) {
+ function useReward(customerId) {
+  const customerFound = customers.find((c) => c.id === customerId);
+
+  if (!customerFound || Number(customerFound.rewardsAvailable || 0) <= 0) {
+    showNotification("Aucune récompense disponible");
+    return;
+  }
+
+  setCustomers((prev) =>
+    prev.map((c) => {
+      if (c.id !== customerId) return c;
+
+      const nextPoints = Math.max(0, Number(c.points || 0) - Number(rewardGoal || 10));
+      const nextRewards = Math.floor(nextPoints / Number(rewardGoal || 10));
+
+      return {
+        ...c,
+        points: nextPoints,
+        rewardsAvailable: nextRewards,
+      };
+    })
+  );
+
+  addLog("A utilisé une récompense", `${customerFound.name} (${customerFound.id})`);
+  showNotification(`Récompense utilisée pour ${customerFound.name}`);
+}
+ function useReward(customerId) {
     const customerFound = customers.find((c) => c.id === customerId);
     if (!customerFound || customerFound.rewardsAvailable <= 0) return;
 
@@ -654,19 +712,23 @@ function purgeOldLogs() {
 
     if (!promo.title.trim() || !promo.description.trim()) return;
 
-    const newPromo = {
-      id: Date.now(),
-      title: promo.title,
-      code: promo.code || `PROMO${promotions.length + 1}`,
-      description: promo.description,
-      channel: promo.channel,
-      status: "Active",
-      createdBy: currentUser.name,
-      createdAt: getNowLabel(),
-      ctaLabel: promo.ctaLabel,
-ctaUrl: promo.ctaUrl,
-    };
+   const now = new Date();
+const validUntil = new Date();
+validUntil.setDate(now.getDate() + 30);
 
+const newPromo = {
+  id: Date.now(),
+  title: promo.title,
+  code: promo.code || `PROMO${promotions.length + 1}`,
+  description: promo.description,
+  channel: promo.channel,
+  status: "Active",
+  createdBy: currentUser.name,
+  createdAt: getNowLabel(),
+ validUntil: promo.validUntil || validUntil.toISOString(),
+  ctaLabel: promo.ctaLabel,
+  ctaUrl: promo.ctaUrl,
+};
     setPromotions([newPromo, ...promotions]);
 
     await fetch(buildApiUrl("/promotions"), {
@@ -1146,7 +1208,9 @@ useEffect(() => {
 }, [isAuthenticated, menuItems]);
 
 useEffect(() => {
- async function loadCustomersFromBackend() {
+  if (!isAuthenticated) return;
+
+  async function loadCustomersFromBackend() {
   try {
     const rawAuth = localStorage.getItem(STORAGE_AUTH);
     const token = rawAuth ? JSON.parse(rawAuth)?.token : "";
@@ -1154,11 +1218,9 @@ useEffect(() => {
     console.log("STORAGE_AUTH =", STORAGE_AUTH);
 console.log("TOKEN CLIENTS =", token);
 
-    const response = await fetch(buildApiUrl("/clients"), {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await authFetch("/clients", {
+  method: "GET",
+});
 
     const data = await response.json();
 
@@ -1171,7 +1233,7 @@ console.log("TOKEN CLIENTS =", token);
 }
 
   loadCustomersFromBackend();
-}, []);
+}, [isAuthenticated]);
 
 function handleSaveMerchantContact() {
   try {
@@ -2653,7 +2715,7 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
     <div style={styles.card}>
       <h3 style={styles.cardTitle}>Demandes de réservation</h3>
       <BookingsManager
-        selectedBusiness={{ id: currentUser?.businessId || "BUS-DYNAMIC" }}
+  businessId={currentUser?.businessId || "BUS-2"}
       />
     </div>
   </>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildApiUrl } from "../../config/api";
 
-export default function BookingsManager({ selectedBusiness }) {
+export default function BookingsManager({ selectedBusiness, businessId: businessIdProp }) {
   const [bookings, setBookings] = useState([]);
   const [viewMode, setViewMode] = useState("active"); // active | archived
    const [loading, setLoading] = useState(false);
@@ -13,9 +13,14 @@ export default function BookingsManager({ selectedBusiness }) {
 const [archivedCount, setArchivedCount] = useState(0);
 
   const businessId = useMemo(
-    () => selectedBusiness?.id || selectedBusiness?._id || "",
-    [selectedBusiness]
-  );
+  () =>
+    businessIdProp ||
+    selectedBusiness?.id ||
+    selectedBusiness?._id ||
+    "BUS-2",
+  [businessIdProp, selectedBusiness]
+);
+console.log("BOOKINGS MANAGER BUSINESS ID =", businessId);
 
 const rawAuth = localStorage.getItem("zeltyo_merchant_auth");
 const auth = rawAuth ? JSON.parse(rawAuth) : null;
@@ -191,7 +196,7 @@ body: JSON.stringify({
       {errorMessage && <div style={errorStyle()}>{errorMessage}</div>}
 
       {!businessId ? (
-        <p style={{ color: "#CFC7B0" }}>Aucun commerce sélectionné.</p>
+        <p style={{ color: "#CFC7B0" }}>Aucun commerce sélectionné TEST ZELTYO.</p>
       ) : loading ? (
         <p style={{ color: "#CFC7B0" }}>Chargement...</p>
       ) : bookings.length === 0 ? (

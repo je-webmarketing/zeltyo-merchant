@@ -74,3 +74,7 @@ export async function sendNotificationToSubscription(subscriptionId, message) {
     return { ok: false, error: err.message };
   }
 }
+
+export async function sendPushNotification(payload) {
+  return sendPush(payload);
+}

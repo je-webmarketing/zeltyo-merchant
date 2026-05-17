@@ -2714,9 +2714,13 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
 
     <div style={styles.card}>
       <h3 style={styles.cardTitle}>Demandes de réservation</h3>
-      <BookingsManager
-  businessId={currentUser?.businessId || "BUS-2"}
-      />
+ <BookingsManager
+  selectedBusiness={{
+    id: "BUS-2",
+    name: "Barber Club Antigone",
+  }}
+  businessId="BUS-2"
+/>
     </div>
   </>
 )}
@@ -3246,7 +3250,23 @@ monthlyHoursByEmployee={monthlyHoursByEmployee}
         les notifications ciblées et l’ajustement du rayon selon la densité de la zone.
       </p>
 
-      <button style={styles.buttonFull}>Enregistrer les réglages</button>
+      <button
+  style={styles.buttonFull}
+  onClick={() => {
+    saveProgramSettings({
+      businessName,
+      rewardGoal,
+      rewardLabel,
+      primaryColor,
+      locationSettings,
+      businessId: currentUser.businessId || "BUS-2",
+    });
+
+    showNotification("Zone du commerce enregistrée");
+  }}
+>
+  Enregistrer les réglages
+</button>
     </div>
 
     <div style={styles.card}>

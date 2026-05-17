@@ -243,21 +243,24 @@ export default function ClientsModule({
                     Visites : <strong>{customer.visits}</strong>
                   </div>
                   <div>
-                    Récompenses : <strong>{customer.rewardsAvailable}</strong>
-                  </div>
+  Récompenses : <strong>{customer.rewardsAvailable}</strong>
+</div>
+
+{Number(customer.rewardsAvailable || 0) > 0 && (
+  <button
+    style={styles.buttonReward}
+    onClick={() => useReward(customer.id)}
+  >
+    Utiliser une récompense
+  </button>
+)}
+
                   <div>
                     Dernière visite : <strong>{customer.lastVisit}</strong>
                   </div>
                 </div>
 
-                <button
-                  style={styles.buttonReward}
-                  onClick={() => useReward(customer.id)}
-                  disabled={customer.rewardsAvailable <= 0}
-                >
-                  Utiliser une récompense
-                </button>
-
+              
                 <button
                   style={styles.buttonSecondary}
                   onClick={() => {

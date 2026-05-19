@@ -2716,10 +2716,10 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
       <h3 style={styles.cardTitle}>Demandes de réservation</h3>
  <BookingsManager
   selectedBusiness={{
-    id: "BUS-2",
-    name: "Barber Club Antigone",
+    id: currentUser.businessId,
+    name: businessName || merchantContact.shopName || "Commerce",
   }}
-  businessId="BUS-2"
+  businessId={currentUser.businessId}
 />
     </div>
   </>

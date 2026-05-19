@@ -17,7 +17,7 @@ const [archivedCount, setArchivedCount] = useState(0);
     businessIdProp ||
     selectedBusiness?.id ||
     selectedBusiness?._id ||
-    "BUS-2",
+    "",
   [businessIdProp, selectedBusiness]
 );
 console.log("BOOKINGS MANAGER BUSINESS ID =", businessId);

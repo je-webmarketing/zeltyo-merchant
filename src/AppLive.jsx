@@ -621,7 +621,13 @@ function purgeOldLogs() {
   body: JSON.stringify(customer),
 });
 
-const data = await response.json();
+let data = {};
+
+try {
+  data = await response.json();
+} catch {
+  data = {};
+}
 
 if (!response.ok || !data.ok) {
   showNotification(data.error || "Erreur création client backend");
@@ -666,7 +672,13 @@ console.log("TOKEN BEFORE VISIT =", JSON.parse(localStorage.getItem("zeltyo_merc
       }),
     });
 
-    const data = await response.json();
+    let data = {};
+
+try {
+  data = await response.json();
+} catch {
+  data = {};
+}
 
     if (!response.ok || !data.ok) {
       showNotification(data.error || "Erreur validation visite");

@@ -673,26 +673,6 @@ console.log("TOKEN BEFORE VISIT =", JSON.parse(localStorage.getItem("zeltyo_merc
   addLog("A utilisé une récompense", `${customerFound.name} (${customerFound.id})`);
   showNotification(`Récompense utilisée pour ${customerFound.name}`);
 }
- function useReward(customerId) {
-    const customerFound = customers.find((c) => c.id === customerId);
-    if (!customerFound || customerFound.rewardsAvailable <= 0) return;
-
-    setCustomers((prev) =>
-      prev.map((c) => {
-        if (c.id !== customerId) return c;
-        return {
-          ...c,
-          rewardsAvailable: c.rewardsAvailable - 1,
-        };
-      })
-    );
-
-    addLog(
-      "A utilisé une récompense",
-      `${customerFound.name} (${customerFound.id})`
-    );
-    showNotification(`Récompense utilisée pour ${customerFound.name}`);
-  }
 
   function getNowLabel() {
   return new Date().toLocaleString("fr-FR", {
@@ -738,7 +718,7 @@ const newPromo = {
   },
   body: JSON.stringify({
     ...newPromo,
-    businessId: currentUser.businessId || "BUS-2",
+    businessId: currentUser.businessId || "",
   }),
 });
 
@@ -761,7 +741,7 @@ const newPromo = {
 
   const item = {
     id: `MENU-${Date.now()}`,
-    businessId: currentUser?.businessId || "BUS-LOCAL",
+    businessId: currentUser?.businessId || "",
     name: newMenuItem.name.trim(),
     description: newMenuItem.description.trim(),
     price: Number(newMenuItem.price),
@@ -2469,17 +2449,19 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
         style={styles.userSelect}
         value={currentUser?.name || ""}
         onChange={(e) => {
-          const selected = employees.find(
-            (emp) => emp.name === e.target.value
-          );
-          if (selected) {
-            setCurrentUser({
-              name: selected.name,
-              role: selected.role,
-              email: selected.email,
-            });
-          }
-        }}
+  const selected = employees.find(
+    (emp) => emp.name === e.target.value
+  );
+
+  if (selected) {
+    setCurrentUser({
+      name: selected.name,
+      role: selected.role,
+      email: selected.email,
+      businessId: selected.businessId,
+    });
+  }
+}}
       >
         {employees.map((employee) => (
           <option key={employee.id} value={employee.name}>
@@ -3259,7 +3241,7 @@ monthlyHoursByEmployee={monthlyHoursByEmployee}
       rewardLabel,
       primaryColor,
       locationSettings,
-      businessId: currentUser.businessId || "BUS-2",
+      businessId: currentUser.businessId || "",
     });
 
     showNotification("Zone du commerce enregistrée");

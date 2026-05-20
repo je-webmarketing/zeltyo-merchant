@@ -3,7 +3,15 @@ import { buildApiUrl } from "./config/api";
 
 function authFetch(path, options = {}) {
   const rawAuth = localStorage.getItem("zeltyo_merchant_auth");
-  const auth = rawAuth ? JSON.parse(rawAuth) : null;
+
+  let auth = null;
+
+  try {
+    auth = rawAuth ? JSON.parse(rawAuth) : null;
+  } catch {
+    localStorage.removeItem("zeltyo_merchant_auth");
+  }
+
   const token = auth?.token || "";
 
   return fetch(buildApiUrl(path), {
@@ -12,6 +20,29 @@ function authFetch(path, options = {}) {
       ...(options.headers || {}),
       Authorization: `Bearer ${token}`,
     },
+  }).then(async (response) => {
+    // SESSION EXPIREE
+    if (response.status === 401) {
+      console.warn("SESSION EXPIREE");
+
+      localStorage.removeItem("zeltyo_merchant_auth");
+
+      window.location.reload();
+
+      throw new Error("Session expirée");
+    }
+
+    // ACCES INTERDIT
+    if (response.status === 403) {
+      console.warn("ACCES REFUSE");
+    }
+
+    // ERREUR SERVEUR
+    if (response.status >= 500) {
+      console.error("ERREUR BACKEND");
+    }
+
+    return response;
   });
 }
 

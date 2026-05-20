@@ -1290,10 +1290,18 @@ if (Array.isArray(data.clients)) {
   loadCustomersFromBackend();
 }, [isAuthenticated]);
 
-function handleSaveMerchantContact() {
+async function handleSaveMerchantContact() {
   try {
+    const businessId = currentUser?.businessId || "";
+
+    if (!businessId) {
+      showNotification("Business ID manquant");
+      return;
+    }
+
     const payload = {
       ...merchantContact,
+      businessId,
       shopName: merchantContact.shopName.trim(),
       ownerName: merchantContact.ownerName.trim(),
       phone: merchantContact.phone.trim(),
@@ -1304,8 +1312,8 @@ function handleSaveMerchantContact() {
       country: merchantContact.country.trim(),
       website: merchantContact.website.trim(),
       vatNumber: merchantContact.vatNumber.trim(),
-      updatedAt: new Date().toISOString(),
       reviewUrl: merchantContact.reviewUrl.trim(),
+      updatedAt: new Date().toISOString(),
     };
 
     localStorage.setItem(STORAGE_MERCHANT_CONTACT, JSON.stringify(payload));
@@ -1314,13 +1322,53 @@ function handleSaveMerchantContact() {
       setBusinessName(payload.shopName);
     }
 
-    showNotification("Coordonnées enregistrées");
+    console.log("LOCATION SETTINGS =", locationSettings);
+    console.log("BUSINESS PAYLOAD =", {
+  name: payload.shopName,
+  country: payload.country,
+  city: payload.city,
+  zoneLabel: locationSettings.zoneLabel,
+  radiusKm: locationSettings.radiusKm,
+  latitude: locationSettings.latitude,
+  longitude: locationSettings.longitude,
+});
+
+    const response = await authFetch(`/businesses/${businessId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: payload.shopName,
+        country: payload.country,
+        city: payload.city,
+        zoneLabel: locationSettings.zoneLabel,
+        radiusKm: locationSettings.radiusKm,
+        latitude: locationSettings.latitude,
+        longitude: locationSettings.longitude,
+        rewardGoal,
+        rewardLabel,
+      }),
+    });
+
+    let data = {};
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
+
+    if (!response.ok || !data.ok) {
+      showNotification(data.error || "Erreur sauvegarde commerce backend");
+      return;
+    }
+
+    showNotification("Coordonnées enregistrées et synchronisées");
   } catch (error) {
     console.error("Erreur sauvegarde coordonnées :", error);
     showNotification("Erreur sauvegarde");
   }
-}
- 
+} 
 
 const socialPreview = `🎁 ${
   promo.title || "Votre offre fidélité"

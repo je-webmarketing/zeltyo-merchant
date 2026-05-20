@@ -1115,14 +1115,13 @@ ${merchantContact.reviewUrl}`
 
       const token = JSON.parse(rawAuth)?.token;
 
-      const response = await fetch(
-        buildApiUrl("/automation-segmented/send-smart-promo"),
+      const response = await authFetch(
+  "/automation-segmented/send-smart-promo",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+            },
           body: JSON.stringify({ type }),
         }
       );
@@ -1157,14 +1156,13 @@ ${merchantContact.reviewUrl}`
       return;
     }
 
-    const response = await fetch(
-      buildApiUrl("/notifications-advanced/send-to-subscription"),
+    const response = await authFetch(
+  "/notifications-advanced/send-to-subscription",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+          },
         body: JSON.stringify({
           subscriptionId: "a67b1b72-bc4c-431b-a3b8-9bf9d79d3079",
           message: "🔥 Promo du jour : Croissant + café à -20% ☕🥐",

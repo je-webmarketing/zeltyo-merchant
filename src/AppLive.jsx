@@ -21,25 +21,14 @@ function authFetch(path, options = {}) {
       Authorization: `Bearer ${token}`,
     },
   }).then(async (response) => {
-    // SESSION EXPIREE
     if (response.status === 401) {
-      console.warn("SESSION EXPIREE");
-
       localStorage.removeItem("zeltyo_merchant_auth");
 
-      window.location.reload();
+      window.dispatchEvent(
+        new CustomEvent("zeltyo-session-expired")
+      );
 
-      throw new Error("Session expirée");
-    }
-
-    // ACCES INTERDIT
-    if (response.status === 403) {
-      console.warn("ACCES REFUSE");
-    }
-
-    // ERREUR SERVEUR
-    if (response.status >= 500) {
-      console.error("ERREUR BACKEND");
+      throw new Error("Session expirée. Merci de vous reconnecter.");
     }
 
     return response;
@@ -322,6 +311,25 @@ const [menuItems, setMenuItems] = useState(() => {
     return [];
   }
 });
+
+useEffect(() => {
+  function handleSessionExpired() {
+    setIsAuthenticated(false);
+    setCurrentUser({
+      name: "",
+      role: "",
+      email: "",
+      businessId: "",
+    });
+    showNotification("Session expirée, merci de vous reconnecter");
+  }
+
+  window.addEventListener("zeltyo-session-expired", handleSessionExpired);
+
+  return () => {
+    window.removeEventListener("zeltyo-session-expired", handleSessionExpired);
+  };
+}, []);
 
 useEffect(() => {
   localStorage.setItem("zeltyo_menu", JSON.stringify(menuItems));

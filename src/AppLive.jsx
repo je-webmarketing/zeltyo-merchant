@@ -762,7 +762,7 @@ const newPromo = {
 };
     setPromotions([newPromo, ...promotions]);
 
-    await fetch(buildApiUrl("/promotions"), {
+    const response = await authFetch("/promotions", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -772,6 +772,19 @@ const newPromo = {
     businessId: currentUser.businessId || "",
   }),
 });
+
+let data = {};
+
+try {
+  data = await response.json();
+} catch {
+  data = {};
+}
+
+if (!response.ok || !data.ok) {
+  showNotification(data.error || "Erreur publication promotion");
+  return;
+}
 
     setPromo({
       title: "",
@@ -932,13 +945,18 @@ function archiveMenuItem(menuId) {
     )
   );
 
-  await fetch(buildApiUrl(`/promotions/${promoId}/status`), {
+  const response = await authFetch(`/promotions/${promoId}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       status: nextStatus,
     }),
   });
+
+  if (!response.ok) {
+  showNotification("Erreur modification promotion");
+  return;
+}
 
   addLog(
     "A modifié une promotion",
@@ -969,10 +987,15 @@ async function archivePromotion(promoId) {
     )
   );
 
-  await fetch(buildApiUrl(`/promotions/${promoId}/archive`), {
+  const response = await authFetch(`/promotions/${promoId}/archive`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
   });
+
+  if (!response.ok) {
+  showNotification("Erreur archivage promotion");
+  return;
+}
 
   addLog("A archivé une promotion", `${targetPromo.title}`);
   showNotification("Promotion archivée");

@@ -1253,11 +1253,22 @@ console.log("TOKEN CLIENTS =", token);
   method: "GET",
 });
 
-    const data = await response.json();
+   let data = {};
 
-    if (data.ok && Array.isArray(data.clients)) {
-      setCustomers(data.clients);
-    }
+try {
+  data = await response.json();
+} catch {
+  data = {};
+}
+
+if (!response.ok || !data.ok) {
+  showNotification(data.error || "Impossible de charger les clients");
+  return;
+}
+
+if (Array.isArray(data.clients)) {
+  setCustomers(data.clients);
+}
   } catch (error) {
     console.error("Erreur chargement clients backend :", error);
   }

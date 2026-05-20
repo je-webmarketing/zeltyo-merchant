@@ -651,14 +651,10 @@ const savedCustomer = data.client || customer;
   showNotification(`Client ajouté par ${currentUser.name}`);
 }
 async function rewardVisit() {
-  console.log("REWARD VISIT VERSION V2");
-  if (!scanId) {
+    if (!scanId) {
     showNotification("Sélectionne un client");
     return;
   }
-
-  console.log("AUTH FETCH EXISTS =", typeof authFetch);
-console.log("TOKEN BEFORE VISIT =", JSON.parse(localStorage.getItem("zeltyo_merchant_auth"))?.token?.slice(0, 20));
 
   try {
     const response = await authFetch("/clients/visit", {
@@ -1171,8 +1167,7 @@ ${merchantContact.reviewUrl}`
     );
 
     const data = await response.json();
-    console.log("Réponse promo :", data);
-
+    
     if (!response.ok) {
       alert("Erreur lors de l'envoi");
       return;
@@ -1266,9 +1261,6 @@ useEffect(() => {
   try {
     const rawAuth = localStorage.getItem(STORAGE_AUTH);
     const token = rawAuth ? JSON.parse(rawAuth)?.token : "";
-
-    console.log("STORAGE_AUTH =", STORAGE_AUTH);
-console.log("TOKEN CLIENTS =", token);
 
     const response = await authFetch("/clients", {
   method: "GET",

@@ -12,19 +12,35 @@ export default function BookingsManager({ selectedBusiness, businessId: business
   const [activeCount, setActiveCount] = useState(0);
 const [archivedCount, setArchivedCount] = useState(0);
 
-  const businessId = useMemo(
-  () =>
-    businessIdProp ||
-    selectedBusiness?.id ||
-    selectedBusiness?._id ||
-    "",
+const businessId = useMemo(
+  () => businessIdProp || selectedBusiness?.id || selectedBusiness?._id || "",
   [businessIdProp, selectedBusiness]
 );
 console.log("BOOKINGS MANAGER BUSINESS ID =", businessId);
 
-const rawAuth = localStorage.getItem("zeltyo_merchant_auth");
-const auth = rawAuth ? JSON.parse(rawAuth) : null;
-const token = auth?.token || "";
+const getAuthToken = () => {
+  try {
+    const rawAuth = localStorage.getItem("zeltyo_merchant_auth");
+    const auth = rawAuth ? JSON.parse(rawAuth) : null;
+    return auth?.token || "";
+  } catch {
+    localStorage.removeItem("zeltyo_merchant_auth");
+    return "";
+  }
+};
+
+const handleUnauthorized = () => {
+  localStorage.removeItem("zeltyo_merchant_auth");
+  window.dispatchEvent(new CustomEvent("zeltyo-session-expired"));
+};
+
+const safeJson = async (response) => {
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
+};
   
   const loadBookings = async () => {
     try {
@@ -38,20 +54,25 @@ const token = auth?.token || "";
       setLoading(true);
 
       const [activeResponse, archivedResponse] = await Promise.all([
+        
   fetch(buildApiUrl(`/bookings/by-business/${businessId}`), {
   headers: {
-    Authorization: `Bearer ${token}`,
+    Authorization: `Bearer ${getAuthToken()}`,
   },
 }),
  fetch(buildApiUrl(`/bookings/archived/${businessId}`), {
   headers: {
-    Authorization: `Bearer ${token}`,
+    Authorization: `Bearer ${getAuthToken()}`,
   },
 }),
 ]);
+if (activeResponse.status === 401 || archivedResponse.status === 401) {
+  handleUnauthorized();
+  return;
+}
 
-const activeData = await activeResponse.json();
-const archivedData = await archivedResponse.json();
+const activeData = await safeJson(activeResponse);
+const archivedData = await safeJson(archivedResponse);
 
 const activeBookings = Array.isArray(activeData.bookings)
   ? activeData.bookings
@@ -94,7 +115,7 @@ const list =
         method: "PATCH",
        headers: {
   "Content-Type": "application/json",
-  Authorization: `Bearer ${token}`,
+  Authorization: `Bearer ${getAuthToken()}`,
 },
 body: JSON.stringify({
   status,
@@ -104,7 +125,12 @@ body: JSON.stringify({
 }),
       });
 
-      const data = await response.json();
+      if (response.status === 401) {
+  handleUnauthorized();
+  return;
+}
+
+const data = await safeJson(response);
 
       if (!response.ok || !data.ok) {
         throw new Error(data.error || "Erreur mise à jour réservation");
@@ -141,11 +167,16 @@ body: JSON.stringify({
         method: "PATCH",
        headers: {
   "Content-Type": "application/json",
-  Authorization: `Bearer ${token}`,
+  Authorization: `Bearer ${getAuthToken()}`,
 },
       });
 
-      const data = await response.json();
+      if (response.status === 401) {
+  handleUnauthorized();
+  return;
+}
+
+const data = await safeJson(response);
 
       if (!response.ok || !data.ok) {
         throw new Error(data.error || "Erreur restauration réservation");

@@ -147,23 +147,24 @@ const [primaryColor, setPrimaryColor] = useState(
 );
 
   const [search, setSearch] = useState("");
-  const [scanId, setScanId] = useState("CL-1001");
+  const [scanId, setScanId] = useState("");
   const [activeTab, setActiveTab] = useState("dashboard");
   const [notification, setNotification] = useState("");
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
 
-  const [currentUser, setCurrentUser] = useState({
-    name: "Sophie Admin",
-    role: "Administrateur",
-  });
+ const [currentUser, setCurrentUser] = useState({
+  name: "",
+  role: "",
+  email: "",
+  businessId: "",
+});
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginForm, setLoginForm] = useState({
-   email: "admin@barberclub.ch",
-password: "Zeltyo123!",
-  });
-
+  email: "",
+  password: "",
+});
   const [newCustomer, setNewCustomer] = useState({
     name: "",
     email: "",

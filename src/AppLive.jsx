@@ -1388,16 +1388,22 @@ async function handleSaveMerchantContact() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        name: payload.shopName,
-        country: payload.country,
-        city: payload.city,
-        zoneLabel: locationSettings.zoneLabel,
-        radiusKm: locationSettings.radiusKm,
-        latitude: locationSettings.latitude,
-        longitude: locationSettings.longitude,
-        rewardGoal,
-        rewardLabel,
-      }),
+  name: payload.shopName,
+  country: payload.country,
+  city: payload.city,
+  zoneLabel: locationSettings.zoneLabel,
+  radiusKm: locationSettings.radiusKm,
+  latitude: locationSettings.latitude,
+  longitude: locationSettings.longitude,
+  rewardGoal,
+  rewardLabel,
+
+  reviewUrl: payload.reviewUrl,
+  website: payload.website,
+  phone: payload.phone,
+  email: payload.email,
+  address: payload.address,
+}),
     });
 
     let data = {};
@@ -3004,38 +3010,40 @@ showNotification(`Visite validée : ${loyaltyId}`);
 )}
 
 {activeTab === "team" && (
-  <TeamModule
-    currentUser={currentUser}
-    newEmployee={newEmployee}
-    setNewEmployee={setNewEmployee}
-    addEmployee={addEmployee}
-    employees={employees}
-    isWorking={isWorking}
-    startShift={startShift}
-    endShift={endShift}
-    getTodayShifts={getTodayShifts}
-    totalByEmployee={totalByEmployee}
-    activityLog={activityLog}
-    styles={styles}
-    COLORS={COLORS}
-    showNotification={showNotification}
-    archiveLog={archiveLog}
-restoreLog={restoreLog}
-purgeOldLogs={purgeOldLogs}
-formatDate={formatDate}
-monthlyHoursByEmployee={monthlyHoursByEmployee}
-  />
-)}
+  <>
+    <TeamModule
+      currentUser={currentUser}
+      newEmployee={newEmployee}
+      setNewEmployee={setNewEmployee}
+      addEmployee={addEmployee}
+      employees={employees}
+      isWorking={isWorking}
+      startShift={startShift}
+      endShift={endShift}
+      getTodayShifts={getTodayShifts}
+      totalByEmployee={totalByEmployee}
+      activityLog={activityLog}
+      styles={styles}
+      COLORS={COLORS}
+      showNotification={showNotification}
+      archiveLog={archiveLog}
+      restoreLog={restoreLog}
+      purgeOldLogs={purgeOldLogs}
+      formatDate={formatDate}
+      monthlyHoursByEmployee={monthlyHoursByEmployee}
+    />
 
-<TeamPlanning
-  employees={employees}
-  planning={planning}
-  setPlanning={setPlanning}
-  currentUser={currentUser}
-  styles={styles}
-  COLORS={COLORS}
-  showNotification={showNotification}
-/>
+    <TeamPlanning
+      employees={employees}
+      planning={planning}
+      setPlanning={setPlanning}
+      currentUser={currentUser}
+      styles={styles}
+      COLORS={COLORS}
+      showNotification={showNotification}
+    />
+  </>
+)}
 
 {activeTab === "settings" && (
   <div style={styles.grid2}>
@@ -3355,13 +3363,31 @@ monthlyHoursByEmployee={monthlyHoursByEmployee}
         </p>
 
         {merchantContact.reviewUrl && (
-          <button
-            style={styles.buttonSecondary}
-            onClick={() => window.open(merchantContact.reviewUrl, "_blank")}
-          >
-            ⭐ Laisser un avis
-          </button>
-        )}
+  <div
+    style={{
+      marginTop: "16px",
+      marginBottom: "16px",
+      textAlign: "center",
+    }}
+  >
+    <QRCodeSVG
+      value={merchantContact.reviewUrl}
+      size={140}
+      bgColor="#FFFFFF"
+      fgColor="#111111"
+      level="H"
+    />
+
+    <div
+      style={{
+        marginTop: "10px",
+        fontWeight: 700,
+      }}
+    >
+      QR Code Avis Google
+    </div>
+  </div>
+)}
 
         <p style={{ lineHeight: 1.7 }}>
           {rewardGoal || "0"} points = {rewardLabel || "Récompense non renseignée"}

@@ -2,6 +2,7 @@ import { useState } from "react";
 
 export default function MenuUploader({ onUpload }) {
   const [dragActive, setDragActive] = useState(false);
+  const [selectedType, setSelectedType] = useState("menu");
 
   function handleDrop(e) {
     e.preventDefault();
@@ -14,8 +15,11 @@ export default function MenuUploader({ onUpload }) {
   }
 
   function handleFile(file) {
-    if (!file.type.startsWith("image/")) {
-      alert("Seules les images sont autorisées");
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+
+    if (!isImage && !isPdf) {
+      alert("Seules les images et les PDF sont autorisés");
       return;
     }
 
@@ -23,7 +27,15 @@ export default function MenuUploader({ onUpload }) {
 
     reader.onload = () => {
       const base64 = reader.result;
-      onUpload(base64);
+
+      onUpload({
+        id: `CONTENT-${Date.now()}`,
+        type: selectedType,
+        fileName: file.name,
+        mimeType: file.type,
+        fileData: base64,
+        createdAt: new Date().toISOString(),
+      });
     };
 
     reader.readAsDataURL(file);
@@ -31,37 +43,68 @@ export default function MenuUploader({ onUpload }) {
 
   return (
     <div
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragActive(true);
-      }}
-      onDragLeave={() => setDragActive(false)}
-      onDrop={handleDrop}
-      onClick={() => document.getElementById("fileInput").click()}
       style={{
-        border: dragActive ? "2px solid #F2A65A" : "2px dashed #555",
-        borderRadius: "12px",
-        padding: "30px",
-        textAlign: "center",
-        cursor: "pointer",
-        background: "#111",
-        color: "#fff",
+        display: "grid",
+        gap: 12,
       }}
     >
-      <input
-        id="fileInput"
-        type="file"
-        accept="image/*"
-        style={{ display: "none" }}
-        onChange={(e) => handleFile(e.target.files[0])}
-      />
+      <select
+        value={selectedType}
+        onChange={(e) => setSelectedType(e.target.value)}
+        style={{
+          width: "100%",
+          padding: "14px",
+          borderRadius: "14px",
+          border: "1px solid #2A2A2A",
+          background: "#161616",
+          color: "#F7F4EA",
+          fontWeight: 700,
+        }}
+      >
+        <option value="menu">Carte / menu</option>
+        <option value="services">Services</option>
+        <option value="tarifs">Tarifs</option>
+        <option value="catalogue">Catalogue</option>
+        <option value="photo">Photo</option>
+      </select>
 
-      <div style={{ fontWeight: 700 }}>
-        📸 Glissez votre carte menu ici
-      </div>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragActive(true);
+        }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={handleDrop}
+        onClick={() => document.getElementById("menuFileInput").click()}
+        style={{
+          border: dragActive ? "2px solid #F2A65A" : "2px dashed #555",
+          borderRadius: "16px",
+          padding: "30px",
+          textAlign: "center",
+          cursor: "pointer",
+          background: "#111",
+          color: "#fff",
+        }}
+      >
+        <input
+          id="menuFileInput"
+          type="file"
+          accept="image/*,application/pdf"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFile(file);
+            e.target.value = "";
+          }}
+        />
 
-      <div style={{ fontSize: "13px", marginTop: "6px", color: "#aaa" }}>
-        ou cliquez pour importer
+        <div style={{ fontWeight: 800, fontSize: "16px" }}>
+          📎 Importer menu, carte, services ou tarifs
+        </div>
+
+        <div style={{ fontSize: "13px", marginTop: "6px", color: "#aaa" }}>
+          Images ou PDF acceptés
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { buildApiUrl } from "./config/api";
+import QRCodeScanner from "./components/QRCodeScanner";
+import BusinessContentManager from "./components/BusinessContentManager";
+import TeamPlanning from "./components/TeamPlanning";
 
 function authFetch(path, options = {}) {
   const rawAuth = localStorage.getItem("zeltyo_merchant_auth");
@@ -336,6 +339,23 @@ useEffect(() => {
   localStorage.setItem("zeltyo_menu", JSON.stringify(menuItems));
 }, [menuItems]);
 
+const [planning, setPlanning] = useState(() => {
+  const saved = localStorage.getItem("zeltyo_planning");
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    localStorage.removeItem("zeltyo_planning");
+    return [];
+  }
+});
+
+useEffect(() => {
+  localStorage.setItem("zeltyo_planning", JSON.stringify(planning));
+}, [planning]);
+
 const [newMenuItem, setNewMenuItem] = useState({
   name: "",
   description: "",
@@ -413,9 +433,28 @@ function getTodayShifts() {
   return shifts.filter((shift) => shift.start.startsWith(today));
 }
 
-function handleMenuUpload(base64) {
-  setMenuImage(base64);
-  localStorage.setItem("merchant_menu_image", base64);
+function handleMenuUpload(content) {
+  const item = {
+    ...content,
+    businessId: currentUser?.businessId || "",
+  };
+
+  setMenuItems((prev) => [item, ...prev]);
+
+  if (content.mimeType?.startsWith("image/")) {
+    setMenuImage(content.fileData);
+    localStorage.setItem("merchant_menu_image", content.fileData);
+  }
+
+  showNotification("Contenu importé avec succès");
+}
+
+function handleDeleteMenuItem(itemId) {
+  setMenuItems((prev) =>
+    prev.filter((item) => item.id !== itemId)
+  );
+
+  showNotification("Contenu supprimé");
 }
 
  function applyBusinessConfig(businessId) {
@@ -434,6 +473,14 @@ function handleMenuUpload(base64) {
     longitude: config.longitude,
     radiusKm: config.radiusKm,
   });
+}
+
+function handleUpdateMenuItem(itemId, updatedItem) {
+  setMenuItems((prev) =>
+    prev.map((item) =>
+      item.id === itemId ? updatedItem : item
+    )
+  );
 }
 
   function saveProgramSettings(settings) {
@@ -602,17 +649,18 @@ function purgeOldLogs() {
   const id = `CL-${Date.now()}`;
 
   const customer = {
-    id,
-    loyaltyId: id,
-    name: newCustomer.name.trim(),
-    email: newCustomer.email.trim(),
-    phone: newCustomer.phone.trim(),
-    points: 0,
-    visits: 0,
-    rewardsAvailable: 0,
-    tier: getTier(0),
-    lastVisit: "Nouveau",
-  };
+  id,
+  loyaltyId: id,
+  businessId: currentUser?.businessId || "",
+  name: newCustomer.name.trim(),
+  email: newCustomer.email.trim(),
+  phone: newCustomer.phone.trim(),
+  points: 0,
+  visits: 0,
+  rewardsAvailable: 0,
+  tier: getTier(0),
+  lastVisit: "Nouveau",
+};
 
   const response = await authFetch("/clients", {
   method: "POST",
@@ -651,8 +699,8 @@ const savedCustomer = data.client || customer;
   addLog("A ajouté un client", `${customer.name} (${customer.id})`);
   showNotification(`Client ajouté par ${currentUser.name}`);
 }
-async function rewardVisit() {
-    if (!scanId) {
+async function rewardVisit(targetId = scanId) {
+    if (!targetId) {
     showNotification("Sélectionne un client");
     return;
   }
@@ -663,10 +711,10 @@ async function rewardVisit() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        id: scanId,
-        points: 1,
-      }),
+    body: JSON.stringify({
+  id: targetId,
+  points: 1,
+})
     });
 
     let data = {};
@@ -2773,6 +2821,25 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
 
     {activeTab === "dashboard" && (
   <>
+  <QRCodeScanner
+  COLORS={COLORS}
+  onDetected={(decodedText) => {
+    console.log("QR SCANNÉ =", decodedText);
+
+    const url = new URL(decodedText);
+    const loyaltyId = url.pathname.split("/card/")[1]?.split("?")[0];
+
+    if (!loyaltyId) {
+      showNotification("QR code invalide");
+      return;
+    }
+
+    setScanId(loyaltyId);
+rewardVisit(loyaltyId);
+showNotification(`Visite validée : ${loyaltyId}`);
+  }}
+/>
+
     <div style={styles.grid5}>
       <StatCard label="Clients actifs" value={totalClients} />
       <StatCard label="Visites" value={totalVisits} />
@@ -2958,8 +3025,17 @@ purgeOldLogs={purgeOldLogs}
 formatDate={formatDate}
 monthlyHoursByEmployee={monthlyHoursByEmployee}
   />
-
 )}
+
+<TeamPlanning
+  employees={employees}
+  planning={planning}
+  setPlanning={setPlanning}
+  currentUser={currentUser}
+  styles={styles}
+  COLORS={COLORS}
+  showNotification={showNotification}
+/>
 
 {activeTab === "settings" && (
   <div style={styles.grid2}>
@@ -3082,167 +3158,27 @@ monthlyHoursByEmployee={monthlyHoursByEmployee}
 
       <h3 style={styles.cardTitle}>Carte menu emporter</h3>
 
-      <MenuUploader onUpload={handleMenuUpload} />
+      <BusinessContentManager
+  contents={menuItems
+    .filter((item) => item.businessId === currentUser.businessId)
+    .map((item) => ({
+      ...item,
+      onUpdate: handleUpdateMenuItem,
+    }))}
+  onUpload={handleMenuUpload}
+  onDelete={handleDeleteMenuItem}
+  COLORS={COLORS}
+/>
 
-      {menuImage && (
-        <div style={{ marginTop: "18px", marginBottom: "18px" }}>
-          <img
-            src={menuImage}
-            alt="Carte menu"
-            style={{
-              width: "100%",
-              borderRadius: "16px",
-              border: `1px solid ${COLORS.border}`,
-              boxShadow: "0 12px 28px rgba(0,0,0,0.35)",
-            }}
-          />
+<div
+  style={{
+    height: "1px",
+    background: COLORS.border,
+    margin: "22px 0",
+  }}
+/>
 
-          <button
-            style={{
-              ...styles.buttonDanger,
-              marginTop: "12px",
-            }}
-            onClick={() => {
-              setMenuImage("");
-              localStorage.removeItem("merchant_menu_image");
-              showNotification("Image du menu supprimée");
-            }}
-          >
-            Supprimer l’image du menu
-          </button>
-        </div>
-      )}
-
-      <input
-        style={styles.input}
-        placeholder="Nom du produit"
-        value={newMenuItem.name}
-        onChange={(e) =>
-          setNewMenuItem({ ...newMenuItem, name: e.target.value })
-        }
-      />
-
-      <input
-        style={styles.input}
-        placeholder="Description courte"
-        value={newMenuItem.description}
-        onChange={(e) =>
-          setNewMenuItem({ ...newMenuItem, description: e.target.value })
-        }
-      />
-
-      <input
-        style={styles.input}
-        type="number"
-        step="0.01"
-        placeholder="Prix"
-        value={newMenuItem.price}
-        onChange={(e) =>
-          setNewMenuItem({ ...newMenuItem, price: e.target.value })
-        }
-      />
-
-      <select
-        style={styles.input}
-        value={newMenuItem.category}
-        onChange={(e) =>
-          setNewMenuItem({ ...newMenuItem, category: e.target.value })
-        }
-      >
-        <option value="Snacking">Snacking</option>
-        <option value="Boissons">Boissons</option>
-        <option value="Desserts">Desserts</option>
-        <option value="Plats">Plats</option>
-        <option value="Formules">Formules</option>
-      </select>
-
-      <button style={styles.buttonFull} onClick={addMenuItem}>
-        Ajouter au menu
-      </button>
-
-      <div style={{ marginTop: "18px", display: "grid", gap: "12px" }}>
-        {menuItems
-          .filter((item) => item.businessId === currentUser.businessId)
-          .filter((item) => !item.archived).length === 0 ? (
-          <p style={styles.muted}>Aucun produit actif dans la carte menu.</p>
-        ) : (
-          menuItems
-            .filter((item) => item.businessId === currentUser.businessId)
-            .filter((item) => !item.archived)
-            .map((item) => (
-              <div key={item.id} style={styles.promoCard}>
-                <div style={styles.rowBetween}>
-                  <div>
-                    <div style={{ fontWeight: 900 }}>{item.name}</div>
-                    <div style={styles.muted}>
-                      {item.category} • {Number(item.price).toFixed(2)} €
-                    </div>
-                  </div>
-
-                  <span style={item.active ? styles.badgeGreen : styles.badgeOrange}>
-                    {item.active ? "Actif" : "Inactif"}
-                  </span>
-                </div>
-
-                {item.description ? (
-                  <div style={styles.kpiLine}>{item.description}</div>
-                ) : null}
-
-                <button
-                  style={{ ...styles.buttonGhost, marginTop: "10px" }}
-                  onClick={() => toggleMenuItem(item.id)}
-                >
-                  {item.active ? "Désactiver" : "Réactiver"}
-                </button>
-
-                <button
-                  style={styles.buttonDanger}
-                  onClick={() => archiveMenuItem(item.id)}
-                >
-                  Archiver
-                </button>
-              </div>
-            ))
-        )}
-      </div>
-
-      <h3 style={styles.sectionTitle}>Produits archivés</h3>
-
-      {menuItems
-        .filter((item) => item.businessId === currentUser.businessId)
-        .filter((item) => item.archived).length === 0 ? (
-        <p style={styles.muted}>Aucun produit archivé.</p>
-      ) : (
-        menuItems
-          .filter((item) => item.businessId === currentUser.businessId)
-          .filter((item) => item.archived)
-          .map((item) => (
-            <div key={item.id} style={styles.promoCard}>
-              <div style={styles.rowBetween}>
-                <strong>{item.name}</strong>
-                <span style={styles.badgeOrange}>Archivé</span>
-              </div>
-
-              <button
-                style={styles.buttonSecondary}
-                onClick={() => restoreMenuItem(item.id)}
-              >
-                Restaurer
-              </button>
-            </div>
-          ))
-      )}
-
-      <div
-        style={{
-          height: "1px",
-          background: COLORS.border,
-          margin: "22px 0",
-        }}
-      />
-
-      <h3 style={styles.cardTitle}>Paramètres du programme</h3>
-
+<h3 style={styles.cardTitle}>Paramètres du programme</h3>
       <input
         style={styles.input}
         placeholder="Nom du commerce"

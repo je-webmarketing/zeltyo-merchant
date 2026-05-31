@@ -79,29 +79,31 @@ const COLORS = {
 
 const BUSINESS_CONFIG = {
   "BUS-2": {
-    name: "Barber Club",
-    rewardGoal: 6,
-    rewardLabel: "1 coupe -50%",
-    primaryColor: "#D4AF37",
-    country: "CH",
-    city: "Lausanne",
-    zoneLabel: "Lausanne Centre",
-    latitude: "46.5197",
-    longitude: "6.6323",
-    radiusKm: "2",
-  },
+  name: "Barber Club",
+  rewardGoal: 6,
+  rewardLabel: "1 coupe -50%",
+  primaryColor: "#D4AF37",
+  country: "CH",
+  city: "Lausanne",
+  region: "Vaud",
+  zoneLabel: "Lausanne Centre",
+  latitude: "46.5197",
+  longitude: "6.6323",
+  radiusKm: "2",
+},
   "BUS-1": {
-    name: "Le Café du Centre",
-    rewardGoal: 10,
-    rewardLabel: "1 boisson offerte",
-    primaryColor: "#D4AF37",
-    country: "CH",
-    city: "Genève",
-    zoneLabel: "Genève Centre",
-    latitude: "46.2044",
-    longitude: "6.1432",
-    radiusKm: "1.5",
-  },
+  name: "Le Café du Centre",
+  rewardGoal: 10,
+  rewardLabel: "1 boisson offerte",
+  primaryColor: "#D4AF37",
+  country: "CH",
+  city: "Genève",
+  region: "Genève",
+  zoneLabel: "Genève Centre",
+  latitude: "46.2044",
+  longitude: "6.1432",
+  radiusKm: "1.5",
+},
 };
 
 const TABS = [
@@ -187,6 +189,7 @@ const [primaryColor, setPrimaryColor] = useState(
   savedProgramSettings?.locationSettings || {
     country: "",
     city: "",
+    region: "",
     zoneLabel: "",
     latitude: "",
     longitude: "",
@@ -335,10 +338,6 @@ useEffect(() => {
   };
 }, []);
 
-useEffect(() => {
-  localStorage.setItem("zeltyo_menu", JSON.stringify(menuItems));
-}, [menuItems]);
-
 const [planning, setPlanning] = useState(() => {
   const saved = localStorage.getItem("zeltyo_planning");
   if (!saved) return [];
@@ -433,13 +432,30 @@ function getTodayShifts() {
   return shifts.filter((shift) => shift.start.startsWith(today));
 }
 
-function handleMenuUpload(content) {
+async function handleMenuUpload(content) {
   const item = {
     ...content,
     businessId: currentUser?.businessId || "",
   };
 
-  setMenuItems((prev) => [item, ...prev]);
+  try {
+  const response = await authFetch("/business-content", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(item),
+  });
+
+  const json = await response.json();
+
+  if (json.ok && json.item) {
+    setMenuItems((prev) => [json.item, ...prev]);
+  }
+} catch (err) {
+  console.error(err);
+  showNotification("Erreur sauvegarde contenu");
+}
 
   if (content.mimeType?.startsWith("image/")) {
     setMenuImage(content.fileData);
@@ -466,13 +482,14 @@ function handleDeleteMenuItem(itemId) {
   setRewardLabel(config.rewardLabel);
   setPrimaryColor(config.primaryColor);
   setLocationSettings({
-    country: config.country,
-    city: config.city,
-    zoneLabel: config.zoneLabel,
-    latitude: config.latitude,
-    longitude: config.longitude,
-    radiusKm: config.radiusKm,
-  });
+  country: config.country,
+  city: config.city,
+  region: config.region || "",
+  zoneLabel: config.zoneLabel,
+  latitude: config.latitude,
+  longitude: config.longitude,
+  radiusKm: config.radiusKm,
+});
 }
 
 function handleUpdateMenuItem(itemId, updatedItem) {
@@ -1259,13 +1276,14 @@ useEffect(() => {
         setLocationSettings(savedProgramSettings.locationSettings);
       } else {
         setLocationSettings({
-          country: "",
-          city: "",
-          zoneLabel: "",
-          latitude: "",
-          longitude: "",
-          radiusKm: "",
-        });
+  country: "",
+  city: "",
+  region: "",
+  zoneLabel: "",
+  latitude: "",
+  longitude: "",
+  radiusKm: "",
+});
       }
 
       setIsAuthenticated(true);
@@ -1296,12 +1314,6 @@ useEffect(() => {
   primaryColor,
   locationSettings,
 ]);
-
-
-useEffect(() => {
-  if (!isAuthenticated) return;
-  localStorage.setItem("zeltyo_menu", JSON.stringify(menuItems));
-}, [isAuthenticated, menuItems]);
 
 useEffect(() => {
   if (!isAuthenticated) return;
@@ -1376,12 +1388,13 @@ async function handleSaveMerchantContact() {
   name: payload.shopName,
   country: payload.country,
   city: payload.city,
+  region: locationSettings.region,
   zoneLabel: locationSettings.zoneLabel,
   radiusKm: locationSettings.radiusKm,
   latitude: locationSettings.latitude,
   longitude: locationSettings.longitude,
 });
-
+console.log("ENVOI BACKEND BUSINESS =", businessId);
     const response = await authFetch(`/businesses/${businessId}`, {
       method: "PATCH",
       headers: {
@@ -1391,6 +1404,7 @@ async function handleSaveMerchantContact() {
   name: payload.shopName,
   country: payload.country,
   city: payload.city,
+  region: locationSettings.region,
   zoneLabel: locationSettings.zoneLabel,
   radiusKm: locationSettings.radiusKm,
   latitude: locationSettings.latitude,
@@ -1404,14 +1418,18 @@ async function handleSaveMerchantContact() {
   email: payload.email,
   address: payload.address,
 }),
-    });
 
-    let data = {};
-    try {
-      data = await response.json();
-    } catch {
-      data = {};
-    }
+    });
+const data = await response.json();
+
+console.log("REPONSE BACKEND BUSINESS =", data);
+
+if (!response.ok || !data.ok) {
+  showNotification(data.error || "Erreur sauvegarde commerce backend");
+  return;
+}
+
+showNotification("Coordonnées enregistrées et synchronisées");
 
     if (!response.ok || !data.ok) {
       showNotification(data.error || "Erreur sauvegarde commerce backend");
@@ -1423,6 +1441,7 @@ async function handleSaveMerchantContact() {
     console.error("Erreur sauvegarde coordonnées :", error);
     showNotification("Erreur sauvegarde");
   }
+  showNotification("Commerce synchronisé avec succès");
 } 
 
 const socialPreview = `🎁 ${
@@ -2175,6 +2194,7 @@ loginLogo: {
  setLocationSettings({
   country: "",
   city: "",
+  region: "",
   zoneLabel: "",
   latitude: "",
   longitude: "",
@@ -3245,8 +3265,20 @@ showNotification(`Visite validée : ${loyaltyId}`);
       />
 
       <input
+  style={styles.input}
+  placeholder="Département / Canton / Région"
+  value={locationSettings.region || ""}
+  onChange={(e) =>
+    setLocationSettings({
+      ...locationSettings,
+      region: e.target.value,
+    })
+  }
+/>
+
+      <input
         style={styles.input}
-        placeholder="Nom de la zone"
+        placeholder="Secteur / Quartier / Zone"
         value={locationSettings.zoneLabel}
         onChange={(e) =>
           setLocationSettings({
@@ -3302,18 +3334,20 @@ showNotification(`Visite validée : ${loyaltyId}`);
 
       <button
   style={styles.buttonFull}
-  onClick={() => {
-    saveProgramSettings({
-      businessName,
-      rewardGoal,
-      rewardLabel,
-      primaryColor,
-      locationSettings,
-      businessId: currentUser.businessId || "",
-    });
+ onClick={async () => {
+  saveProgramSettings({
+    businessName,
+    rewardGoal,
+    rewardLabel,
+    primaryColor,
+    locationSettings,
+    businessId: currentUser.businessId || "",
+  });
 
-    showNotification("Zone du commerce enregistrée");
-  }}
+  await handleSaveMerchantContact();
+
+  showNotification("Zone du commerce enregistrée et synchronisée");
+}}
 >
   Enregistrer les réglages
 </button>
@@ -3399,11 +3433,12 @@ showNotification(`Visite validée : ${loyaltyId}`);
         </p>
 
         <p style={{ lineHeight: 1.7, opacity: 0.95, marginBottom: 0 }}>
-          Zone : {locationSettings.zoneLabel || "Zone non renseignée"} •{" "}
-          {locationSettings.city || "Ville non renseignée"} •{" "}
-          {locationSettings.country || "Pays non renseigné"} • Rayon :{" "}
-          {locationSettings.radiusKm || "0"} km
-        </p>
+  Zone : {locationSettings.zoneLabel || "Zone non renseignée"} •{" "}
+  {locationSettings.city || "Ville non renseignée"} •{" "}
+  {locationSettings.region || "Département/Canton non renseigné"} •{" "}
+  {locationSettings.country || "Pays non renseigné"} • Rayon :{" "}
+  {locationSettings.radiusKm || "0"} km
+</p>
       </div>
     </div>
   </div>

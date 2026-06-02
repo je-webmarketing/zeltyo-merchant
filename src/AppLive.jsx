@@ -221,6 +221,57 @@ useEffect(() => {
   localStorage.setItem("zeltyo_customers", JSON.stringify(customers));
 }, [customers]);
 
+useEffect(() => {
+  if (!isAuthenticated || !currentUser?.businessId) return;
+
+  async function loadBusinessFromBackend() {
+    try {
+      const response = await authFetch(`/businesses/${currentUser.businessId}`);
+      const data = await response.json();
+
+      if (!response.ok || !data.ok || !data.business) return;
+
+      const business = data.business;
+      console.log("COMMERCE BACKEND CHARGÉ =", business);
+
+      setBusinessName(business.name || "");
+      setRewardGoal(business.rewardGoal || "");
+      setRewardLabel(business.rewardLabel || "");
+
+      setLocationSettings({
+        country: business.country || "",
+        city: business.city || "",
+        region: business.region || "",
+        zoneLabel: business.zoneLabel || "",
+        latitude: business.latitude || "",
+        longitude: business.longitude || "",
+        radiusKm: business.radiusKm || "",
+      });
+
+      saveProgramSettings({
+        businessName: business.name || "",
+        rewardGoal: business.rewardGoal || "",
+        rewardLabel: business.rewardLabel || "",
+        primaryColor,
+        locationSettings: {
+          country: business.country || "",
+          city: business.city || "",
+          region: business.region || "",
+          zoneLabel: business.zoneLabel || "",
+          latitude: business.latitude || "",
+          longitude: business.longitude || "",
+          radiusKm: business.radiusKm || "",
+        },
+        businessId: currentUser.businessId,
+      });
+    } catch (error) {
+      console.error("Erreur chargement commerce connecté :", error);
+    }
+  }
+
+  loadBusinessFromBackend();
+}, [isAuthenticated, currentUser?.businessId]);
+
 const [promotions, setPromotions] = useState(() => {
   const saved = localStorage.getItem("zeltyo_promotions");
 
@@ -717,34 +768,52 @@ const savedCustomer = data.client || customer;
   showNotification(`Client ajouté par ${currentUser.name}`);
 }
 async function rewardVisit(targetId = scanId) {
-    if (!targetId) {
+    if (targetId?.nativeEvent || targetId?.target) {
+    targetId = scanId;
+  }
+  
+  if (!targetId) {
     showNotification("Sélectionne un client");
     return;
   }
 
   try {
+    console.log("VALIDATION VISITE =", {
+      clientId: targetId,
+      businessId: currentUser?.businessId,
+    });
+
     const response = await authFetch("/clients/visit", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-    body: JSON.stringify({
-  id: targetId,
-  points: 1,
-})
+      body: JSON.stringify({
+        id: targetId,
+        loyaltyId: targetId,
+        businessId: currentUser?.businessId || "",
+        points: 1,
+      }),
     });
 
-    let data = {};
+    const data = await response.json();
 
-try {
-  data = await response.json();
-} catch {
-  data = {};
-}
+    console.log("REPONSE VISITE =", data);
 
     if (!response.ok || !data.ok) {
       showNotification(data.error || "Erreur validation visite");
       return;
+    }
+
+    if (data.client) {
+      setCustomers((prev) =>
+        prev.map((customer) =>
+          String(customer.id) === String(data.client.id) ||
+          String(customer.loyaltyId) === String(data.client.loyaltyId)
+            ? data.client
+            : customer
+        )
+      );
     }
 
     if (Array.isArray(data.clients)) {
@@ -752,7 +821,11 @@ try {
       localStorage.setItem("zeltyo_customers", JSON.stringify(data.clients));
     }
 
-    addLog("A validé une visite", `${data.client?.name || "Client"} (${scanId})`);
+    addLog(
+      "A validé une visite",
+      `${data.client?.name || "Client"} (${targetId})`
+    );
+
     showNotification(`+1 point ajouté pour ${data.client?.name || "le client"}`);
   } catch (error) {
     console.error("Erreur validation visite :", error);
@@ -1266,15 +1339,56 @@ useEffect(() => {
         businessId: auth.user.businessId,
       });
 
+      fetch(buildApiUrl(`/businesses/${auth.user.businessId}`), {
+  headers: {
+    Authorization: `Bearer ${auth.token}`,
+  },
+})
+  .then((res) => res.json())
+  .then((data) => {
+    console.log("COMMERCE BACKEND SESSION =", data);
+
+    if (data.ok && data.business) {
+      setBusinessName(data.business.name || "");
+      setRewardGoal(data.business.rewardGoal || 10);
+      setRewardLabel(data.business.rewardLabel || "");
+      setLocationSettings({
+        country: data.business.country || "",
+        city: data.business.city || "",
+        region: data.business.region || "",
+        zoneLabel: data.business.zoneLabel || "",
+        latitude: data.business.latitude || "",
+        longitude: data.business.longitude || "",
+        radiusKm: data.business.radiusKm || "",
+      });
+    }
+  });
+
       if (!auth.user.businessId) {
         setActiveTab("onboarding");
       }
 
       const savedProgramSettings = loadProgramSettings();
 
-      if (savedProgramSettings?.businessId === auth.user.businessId) {
-        setLocationSettings(savedProgramSettings.locationSettings);
-      } else {
+   if (savedProgramSettings?.businessId === auth.user.businessId) {
+
+  setBusinessName(savedProgramSettings.businessName || "");
+  setRewardGoal(savedProgramSettings.rewardGoal || "");
+  setRewardLabel(savedProgramSettings.rewardLabel || "");
+  setPrimaryColor(savedProgramSettings.primaryColor || "");
+
+  setLocationSettings(
+    savedProgramSettings.locationSettings || {
+      country: "",
+      city: "",
+      region: "",
+      zoneLabel: "",
+      latitude: "",
+      longitude: "",
+      radiusKm: "",
+    }
+  );
+}else {
         setLocationSettings({
   country: "",
   city: "",
@@ -1297,6 +1411,8 @@ useEffect(() => {
 
 useEffect(() => {
   if (!isAuthenticated) return;
+  if (!currentUser?.businessId) return;
+  if (!businessName || !businessName.trim()) return;
 
   saveProgramSettings({
     businessName,
@@ -1308,6 +1424,7 @@ useEffect(() => {
   });
 }, [
   isAuthenticated,
+  currentUser?.businessId,
   businessName,
   rewardGoal,
   rewardLabel,
@@ -2403,6 +2520,15 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
   return acc;
 }, {});
 
+const displayBusinessName =
+  businessName ||
+  merchantContact.shopName ||
+  currentUser.name?.replace(/admin/gi, "").trim() ||
+  currentUser.businessId ||
+  "Commerce";
+
+const displayRewardGoal = rewardGoal || 10;
+
   if (!isAuthenticated) {
     return (
       <div style={styles.loginPage}>
@@ -2624,8 +2750,10 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
           {currentUser?.name || "Utilisateur"}
         </div>
         <div style={styles.sessionMeta}>
-          {businessName} •{" "}
-          {currentUser.role === "admin" ? "Administrateur" : "Employé"}
+        {displayBusinessName} •{" "}
+{currentUser.role === "admin"
+  ? "Administrateur"
+  : "Employé"}
         </div>
       </div>
 
@@ -2679,7 +2807,9 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
           <div style={styles.heroGlow} />
           <div style={styles.heroLeft}>
             <div style={styles.heroBadge}>Pilotage commerçant premium</div>
-            <h2 style={styles.heroTitle}>{businessName}</h2>
+            <h2 style={styles.heroTitle}>
+  {businessName || merchantContact.shopName || currentUser.businessId || "Commerce"}
+</h2>
             <p style={styles.heroText}>
               Gérez vos clients, vos récompenses, vos promotions et le contrôle
               d’équipe dans un espace premium plus lisible. L’administrateur
@@ -2688,12 +2818,11 @@ const monthlyHoursByEmployee = shifts.reduce((acc, shift) => {
             </p>
           </div>
 
-          <div style={styles.heroRight}>
-            <div style={styles.heroStat}>
-              <div style={styles.heroStatLabel}>Programme fidélité</div>
-              <div style={styles.heroStatValue}>{rewardGoal} points</div>
-              <div style={styles.heroStatMeta}>{rewardLabel}</div>
-            </div>
+         <div style={styles.heroStat}>
+  <div style={styles.heroStatLabel}>Programme fidélité</div>
+  <div style={styles.heroStatValue}>{displayRewardGoal} points</div>
+  <div style={styles.heroStatMeta}>{rewardLabel}</div>
+</div>
 
             <div style={styles.heroStat}>
               <div style={styles.heroStatLabel}>Zone active</div>
@@ -3456,7 +3585,7 @@ showNotification(`Visite validée : ${loyaltyId}`);
           </a>
         </div>
       </div>
-    </div>
+    
   );
 
   function FakeQr({ value }) {

@@ -78,7 +78,7 @@ export default function ClientsModule({
             ))}
           </select>
 
-          <button style={styles.buttonFull} onClick={rewardVisit}>
+          <button style={styles.buttonFull} onClick={() => rewardVisit(scanId)}>
             Ajouter 1 point après validation
           </button>
 

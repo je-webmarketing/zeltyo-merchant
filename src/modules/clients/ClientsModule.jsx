@@ -207,6 +207,22 @@ export default function ClientsModule({
                     includeMargin={false}
                   />
 
+                  <div
+  style={{
+    marginTop: 12,
+    padding: "10px 12px",
+    borderRadius: 12,
+    background: "rgba(212,175,55,0.12)",
+    border: `1px solid ${COLORS.gold}`,
+    color: COLORS.goldLight,
+    fontWeight: 900,
+    fontSize: 14,
+    wordBreak: "break-all",
+  }}
+>
+  Code fidélité : {customer?.loyaltyId || customer?.id || "Non disponible"}
+</div>
+
                   <button
                     style={styles.buttonSecondary}
                     onClick={() => {

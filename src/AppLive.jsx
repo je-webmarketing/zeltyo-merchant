@@ -2978,11 +2978,18 @@ const displayRewardGoal = rewardGoal || 10;
   <>
   <QRCodeScanner
   COLORS={COLORS}
+  customers={customers}
   onDetected={(decodedText) => {
     console.log("QR SCANNÉ =", decodedText);
 
-    const url = new URL(decodedText);
-    const loyaltyId = url.pathname.split("/card/")[1]?.split("?")[0];
+    let loyaltyId = decodedText;
+
+try {
+  const url = new URL(decodedText);
+  loyaltyId = url.pathname.split("/card/")[1]?.split("?")[0] || decodedText;
+} catch {
+  loyaltyId = decodedText;
+}
 
     if (!loyaltyId) {
       showNotification("QR code invalide");

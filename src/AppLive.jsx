@@ -833,31 +833,73 @@ async function rewardVisit(targetId = scanId) {
   }
 }
 
- function useReward(customerId) {
-  const customerFound = customers.find((c) => c.id === customerId);
+async function useReward(customerId) {
+  const goal = Number(rewardGoal || 10);
 
-  if (!customerFound || Number(customerFound.rewardsAvailable || 0) <= 0) {
-    showNotification("Aucune récompense disponible");
+  const customerFound = customers.find(
+    (c) =>
+      String(c.id) === String(customerId) ||
+      String(c.loyaltyId) === String(customerId)
+  );
+
+  if (!customerFound) {
+    showNotification("Client introuvable");
     return;
   }
 
-  setCustomers((prev) =>
-    prev.map((c) => {
-      if (c.id !== customerId) return c;
+  const currentPoints = Number(customerFound.points || 0);
 
-      const nextPoints = Math.max(0, Number(c.points || 0) - Number(rewardGoal || 10));
-      const nextRewards = Math.floor(nextPoints / Number(rewardGoal || 10));
+  if (currentPoints < goal) {
+    showNotification(
+      `Récompense non disponible : encore ${goal - currentPoints} point(s)`
+    );
+    return;
+  }
 
-      return {
-        ...c,
-        points: nextPoints,
-        rewardsAvailable: nextRewards,
-      };
-    })
-  );
+  try {
+    const response = await authFetch("/clients/use-reward", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: customerFound.id,
+        loyaltyId: customerFound.loyaltyId || customerFound.id,
+        rewardGoal: goal,
+      }),
+    });
 
-  addLog("A utilisé une récompense", `${customerFound.name} (${customerFound.id})`);
-  showNotification(`Récompense utilisée pour ${customerFound.name}`);
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      showNotification(data.error || "Erreur utilisation récompense");
+      return;
+    }
+
+    if (Array.isArray(data.clients)) {
+      setCustomers(data.clients);
+      localStorage.setItem("zeltyo_customers", JSON.stringify(data.clients));
+    } else if (data.client) {
+      setCustomers((prev) =>
+        prev.map((c) =>
+          String(c.id) === String(data.client.id) ||
+          String(c.loyaltyId) === String(data.client.loyaltyId)
+            ? data.client
+            : c
+        )
+      );
+    }
+
+    addLog(
+      "A utilisé une récompense",
+      `${customerFound.name} (${customerFound.id})`
+    );
+
+    showNotification(`Récompense utilisée pour ${customerFound.name}`);
+  } catch (error) {
+    console.error("Erreur utilisation récompense :", error);
+    showNotification("Erreur connexion backend");
+  }
 }
 
   function getNowLabel() {
@@ -2978,7 +3020,7 @@ const displayRewardGoal = rewardGoal || 10;
   <>
   <QRCodeScanner
   COLORS={COLORS}
-  customers={customers}
+  customers={filteredCustomers}
   onDetected={(decodedText) => {
     console.log("QR SCANNÉ =", decodedText);
 

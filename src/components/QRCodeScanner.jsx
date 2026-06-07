@@ -100,7 +100,13 @@ export default function QRCodeScanner({ onDetected, COLORS, customers = [] }) {
         }}
       >
         <option value="">Sélectionner un client</option>
-        {customers.map((customer) => (
+        {[...customers]
+  .sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "", "fr", {
+      sensitivity: "base",
+    })
+  )
+  .map((customer) => (
           <option
             key={customer.id || customer.loyaltyId}
             value={customer.loyaltyId || customer.id}

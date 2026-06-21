@@ -29,6 +29,24 @@ const merchantUsers = [
     name: "Barber Club Employé",
     isActive: true,
   },
+  {
+  id: "user_istanbul_admin",
+  email: "admin@istanbulkebab.fr",
+  passwordHash: bcrypt.hashSync("Zeltyo123!", 10),
+  role: "merchant_admin",
+  businessId: "BUS-ISTANBUL",
+  name: "Istanbul Kebab Admin",
+  isActive: true,
+},
+{
+  id: "user_istanbul_employee",
+  email: "employee@istanbulkebab.fr",
+  passwordHash: bcrypt.hashSync("Zeltyo123!", 10),
+  role: "merchant_employee",
+  businessId: "BUS-ISTANBUL",
+  name: "Istanbul Kebab Employé",
+  isActive: true,
+},
 ];
 
 router.post("/merchant-login", async (req, res) => {

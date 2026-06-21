@@ -489,6 +489,8 @@ async function handleMenuUpload(content) {
     businessId: currentUser?.businessId || "",
   };
 
+  console.log("CONTENT ITEM SENT =", item);
+
   try {
   const response = await authFetch("/business-content", {
     method: "POST",

@@ -107,12 +107,13 @@ const BUSINESS_CONFIG = {
 };
 
 const TABS = [
-  { key: "dashboard", label: "Tableau de bord", icon: "◈" },
-  { key: "clients", label: "Clients", icon: "◎" },
-  { key: "promos", label: "Promotions", icon: "✦" },
-  { key: "team", label: "Équipe & contrôle", icon: "▣" },
-  { key: "settings", label: "Paramètres", icon: "⚙" },
-  { key: "onboarding", label: "Démarrage", icon: "🚀" },
+  { key: "dashboard", label: "Tableau de bord", icon: "◈", roles: ["admin", "employee"] },
+  { key: "clients", label: "Clients", icon: "⊙", roles: ["admin", "employee"] },
+  { key: "myPlanning", label: "Mon planning", icon: "📅", roles: ["employee"] },
+  { key: "promos", label: "Promotions", icon: "✦", roles: ["admin"] },
+  { key: "team", label: "Équipe & contrôle", icon: "▣", roles: ["admin"] },
+  { key: "settings", label: "Paramètres", icon: "⚙", roles: ["admin"] },
+  { key: "onboarding", label: "Démarrage", icon: "🚀", roles: ["admin"] },
 ];
 
 export default function App() {
@@ -2903,10 +2904,14 @@ const displayRewardGoal = rewardGoal || 10;
             <div style={styles.nav}>
               {TABS
   .filter((tab) => {
-    // 🔥 Si onboarding actif → on affiche tout (ou juste onboarding si tu veux être strict)
-    if (activeTab === "onboarding") return true;
+    if (!tab.roles?.includes(currentUser?.role)) {
+      return false;
+    }
 
-    // 🔥 Sinon → on bloque tant que commerce pas configuré
+    if (activeTab === "onboarding") {
+      return true;
+    }
+
     return businessName && businessName.trim() !== "";
   })
   .map((tab) => (
@@ -2933,24 +2938,30 @@ const displayRewardGoal = rewardGoal || 10;
               >
                 Valider une visite
               </button>
-             <button
-  style={styles.quickButton}
-  onClick={() => setActiveTab("promos")}
->
-  Créer une promotion
-</button>
-              <button
-                style={styles.quickButton}
-                onClick={() => setActiveTab("team")}
-              >
-                Contrôle équipe
-              </button>
-              <button
-                style={styles.quickButton}
-                onClick={() => setActiveTab("settings")}
-              >
-                Programme & zone
-              </button>
+             {currentUser?.role === "admin" && (
+  <button
+    style={styles.quickButton}
+    onClick={() => setActiveTab("promos")}
+  >
+    Créer une promotion
+  </button>
+)}
+            {currentUser?.role === "admin" && (
+  <button
+    style={styles.quickButton}
+    onClick={() => setActiveTab("team")}
+  >
+    Contrôle équipe
+  </button>
+)}
+              {currentUser?.role === "admin" && (
+  <button
+    style={styles.quickButton}
+    onClick={() => setActiveTab("settings")}
+  >
+    Programme & zone
+  </button>
+)}
             </div>
           </div>
         </div>
@@ -3188,6 +3199,29 @@ showNotification(`Visite validée : ${loyaltyId}`);
     >
       Terminer la configuration
     </button>
+  </div>
+)}
+
+{activeTab === "myPlanning" && (
+  <div style={styles.card}>
+    <h3 style={styles.cardTitle}>Mon planning</h3>
+
+    <TeamPlanning
+      employees={employees.filter(
+        (employee) => employee.email === currentUser.email
+      )}
+      planning={planning.filter(
+        (item) =>
+          item.employeeEmail === currentUser.email ||
+          item.employeeId === currentUser.id
+      )}
+      setPlanning={setPlanning}
+      currentUser={currentUser}
+      styles={styles}
+      COLORS={COLORS}
+      showNotification={showNotification}
+      readOnly={true}
+    />
   </div>
 )}
 

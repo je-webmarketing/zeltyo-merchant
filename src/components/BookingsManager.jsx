@@ -104,54 +104,52 @@ const list =
     }
   };
 
-  const updateBooking = async (bookingId, status, extra = {}) => {
-    try {
-      if (!bookingId) return;
+  
+const updateBooking = async (bookingId, status, extra = {}) => {
+  try {
+    setUpdatingId(bookingId);
 
-      setUpdatingId(bookingId);
-      setErrorMessage("");
+    const response = await fetch(buildApiUrl(`/bookings/${bookingId}/status`), {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        status,
+        ...extra,
+      }),
+    });
 
-      const response = await fetch(buildApiUrl(`/bookings/${bookingId}/status`), {
-        method: "PATCH",
-       headers: {
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${getAuthToken()}`,
-},
-body: JSON.stringify({
-  status,
-  merchantResponse: extra.message || "",
-  proposedDate: extra.date || "",
-  proposedTime: extra.time || "",
-}),
-      });
+    const data = await response.json();
 
-      if (response.status === 401) {
-  handleUnauthorized();
-  return;
-}
-
-const data = await safeJson(response);
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "Erreur mise à jour réservation");
-      }
-
-      setResponses((prev) => ({
-        ...prev,
-        [bookingId]: { message: "", date: "", time: "" },
-      }));
-
-      await loadBookings();
-    } catch (error) {
-      console.error("Erreur update réservation :", error);
-      setErrorMessage(error.message || "Erreur mise à jour réservation");
-    } finally {
-      setUpdatingId("");
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || "Erreur mise à jour réservation");
     }
-  };
 
-  const handleProposeSlot = async (bookingId) => {
-  await updateBooking(bookingId, "confirmed", responses[bookingId]);
+    await loadBookings();
+
+    window.dispatchEvent(
+      new CustomEvent("zeltyo-booking-updated", {
+        detail: {
+          bookingId,
+          status,
+        },
+      })
+    );
+  } catch (error) {
+    console.error("Erreur update réservation :", error);
+    setErrorMessage(error.message || "Erreur mise à jour réservation");
+  } finally {
+    setUpdatingId("");
+  }
+};
+
+const handleProposeSlot = async (bookingId) => {
+  await updateBooking(
+    bookingId,
+    "confirmed",
+    responses[bookingId] || {}
+  );
 
   setOpenProposalId("");
 };

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { buildApiUrl } from "./config/api";
 
-const API_BASE = "http://zeltyo-app.onrender.com";
+const API_BASE = "https://zeltyo-app.onrender.com";
 
 const COLORS = {
   bg: "#050505",
@@ -24,53 +25,67 @@ export default function ResetPassword() {
   }, []);
 
   async function handleReset() {
-    if (!token) {
-      setMessage("Token manquant");
-      return;
-    }
-
-    if (!password || !confirmPassword) {
-      setMessage("Tous les champs sont obligatoires");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setMessage("Les mots de passe ne correspondent pas");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setMessage("");
-
-      const response = await fetch(`${API_BASE}/auth/reset-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          token,
-          password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        setMessage(data.error || "Impossible de réinitialiser le mot de passe");
-        return;
-      }
-
-      setMessage("Mot de passe mis à jour avec succès");
-      setPassword("");
-      setConfirmPassword("");
-    } catch (error) {
-      console.error(error);
-      setMessage("Erreur de connexion au serveur");
-    } finally {
-      setLoading(false);
-    }
+  console.log("HANDLE RESET EXECUTÉ");  
+  if (!token) {
+    setMessage("Token manquant");
+    return;
   }
+
+  if (!password || !confirmPassword) {
+    setMessage("Tous les champs sont obligatoires");
+    return;
+  }
+
+  if (password.length < 8) {
+    setMessage("Le mot de passe doit contenir au moins 8 caractères");
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    setMessage("Les mots de passe ne correspondent pas");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setMessage("");
+
+    const resetUrl = buildApiUrl("/auth/reset-password");
+console.log("API =", resetUrl);
+
+const response = await fetch(resetUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        token,
+        password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      setMessage(data.error || "Impossible de réinitialiser le mot de passe");
+      return;
+    }
+
+    setMessage("Mot de passe mis à jour avec succès ✅");
+
+    setPassword("");
+    setConfirmPassword("");
+
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 1500);
+  } catch (error) {
+    console.error("reset-password frontend error:", error);
+    setMessage("Erreur de connexion au serveur");
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <div

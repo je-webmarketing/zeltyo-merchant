@@ -2705,6 +2705,11 @@ const displayRewardGoal = rewardGoal || 10;
         return;
       }
 
+      console.log("FRONT FORGOT CLICK", {
+  email: forgotEmail,
+  url: buildApiUrl("/auth/forgot-password"),
+});
+
       const response = await fetch(
         buildApiUrl("/auth/forgot-password"),
         {

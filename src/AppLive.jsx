@@ -3663,6 +3663,7 @@ showNotification(`Visite validée : ${loyaltyId}`);
   </div>
 )}
 
+
         <div style={styles.footer}>
           <div>{poweredByLabel}</div>
           <a
@@ -3673,6 +3674,24 @@ showNotification(`Visite validée : ${loyaltyId}`);
           >
             je-webmarketing.com
           </a>
+
+          <div
+  style={{
+    marginTop: 12,
+    display: "flex",
+    justifyContent: "center",
+    gap: 12,
+    flexWrap: "wrap",
+    fontSize: 13,
+  }}
+>
+  <a href="/mentions-legales" style={styles.poweredLink}>Mentions légales</a>
+  <a href="/confidentialite" style={styles.poweredLink}>Confidentialité</a>
+  <a href="/cgu" style={styles.poweredLink}>CGU</a>
+  <a href="/cgv" style={styles.poweredLink}>CGV</a>
+  <a href="/cookies" style={styles.poweredLink}>Cookies</a>
+  <a href="/contact" style={styles.poweredLink}>Contact</a>
+</div>
         </div>
       </div>
     
